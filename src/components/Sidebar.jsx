@@ -1,16 +1,30 @@
+import { NavLink } from "react-router-dom";
+
 export default function Sidebar() {
- return (
+  return (
     <aside className="sidebar">
       <h2>🚢 TR-FLEX</h2>
 
       <nav>
-        <div className="menu-item active">📊 Dashboard</div>
-        <div className="menu-item">📅 Planning</div>
-        <div className="menu-item">👷 Medewerkers</div>
-        <div className="menu-item">🏭 Terminals</div>
-        <div className="menu-item">📋 Aanvragen</div>
-        <div className="menu-item">📈 Rapportages</div>
-        <div className="menu-item">⚙️ Instellingen</div>
+        <NavLink to="/" end className="menu-item">
+          📊 Dashboard
+        </NavLink>
+
+        <NavLink to="/planning" className="menu-item">
+          📅 Planning
+        </NavLink>
+
+        <NavLink to="/medewerkers" className="menu-item">
+          👷 Medewerkers
+        </NavLink>
+
+        <NavLink to="/terminals" className="menu-item">
+          🏭 Terminals
+        </NavLink>
+
+        <NavLink to="/rapportages" className="menu-item">
+          📈 Rapportages
+        </NavLink>
       </nav>
     </aside>
   );
