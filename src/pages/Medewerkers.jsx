@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../services/supabase";
 import MedewerkerForm from "../components/MedewerkerForm";
+import SearchBar from "../components/SearchBar";
+import MedewerkerTable from "../components/MedewerkerTable";
 
 export default function Medewerkers() {
   const [medewerkers, setMedewerkers] = useState([]);
@@ -43,62 +45,72 @@ export default function Medewerkers() {
           </button>
         </div>
 
-        <div style={{ marginBottom: "20px" }}>
-          <input
-            type="text"
-            placeholder="🔍 Zoek medewerker..."
-            value={zoekterm}
-            onChange={(e) => setZoekterm(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              fontSize: "16px",
-            }}
-          />
-        </div>
+        <SearchBar
+  value={zoekterm}
+  onChange={setZoekterm}
+/>
+          
+            
+            
+            
+          
+            
+              
+              
+              
+              
+              
+            
+          
+        
 
-        <table>
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Functie</th>
-              <th>Terminal</th>
-              <th>Status</th>
-              <th>Acties</th>
-            </tr>
-          </thead>
+   <MedewerkerTable
+  medewerkers={medewerkers.filter((m) =>
+    m.naam.toLowerCase().includes(zoekterm.toLowerCase())
+  )}
+/>     
+  
+  
 
-          <tbody>
-            {medewerkers
-              .filter((m) =>
-                m.naam.toLowerCase().includes(zoekterm.toLowerCase())
-              )
-              .map((m) => (
-                <tr key={m.id}>
-                  <td>{m.naam}</td>
-                  <td>{m.functie}</td>
-                  <td>{m.terminal}</td>
-                  <td>{m.status}</td>
+          
+            
+              
+              
+              
+              
+            
+            
+          
 
-                  <td>
-                    <button className="new-btn">✏️</button>
+          
+          
+              
+                
+              
+              
+                
+                  
+                  
+                  
+                  
 
-                    <button
-                      className="new-btn"
-                      style={{
-                        marginLeft: "10px",
-                        background: "#d9534f",
-                      }}
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+                  
+                    
+
+                    
+                      
+                      
+                        
+                        
+                      
+                    
+                      
+                    
+                  
+                
+              
+          
+        
       </div>
 
       {toonForm && (
