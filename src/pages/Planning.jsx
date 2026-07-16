@@ -1,14 +1,15 @@
-import WeekPlanner from "../components/planning/WeekPlanner";
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 import PlanningForm from "../components/PlanningForm";
 import PlanningTable from "../components/planning/PlanningTable";
+import WeekPlanner from "../components/planning/WeekPlanner";
 
 export default function Planning() {
   const [planning, setPlanning] = useState([]);
   const [toonForm, setToonForm] = useState(false);
   const [geselecteerdePlanning, setGeselecteerdePlanning] = useState(null);
   const [zoekterm, setZoekterm] = useState("");
+  const [weergave, setWeergave] = useState("lijst");
 
   useEffect(() => {
     laadPlanning();
@@ -52,7 +53,6 @@ export default function Planning() {
   return (
     <>
       <div className="table">
-
         <div
           style={{
             display: "flex",
@@ -74,30 +74,51 @@ export default function Planning() {
           </button>
         </div>
 
-        <input
-          type="text"
-          placeholder="🔍 Zoek medewerker of terminal..."
-          value={zoekterm}
-          onChange={(e) => setZoekterm(e.target.value)}
-        />
+        <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+          <button
+            className="new-btn"
+            onClick={() => setWeergave("lijst")}
+          >
+            📋 Lijst
+          </button>
 
-        <br />
-        <br />
+          <button
+            className="new-btn"
+            onClick={() => setWeergave("week")}
+          >
+            📅 Weekplanner
+          </button>
+        </div>
 
-        <PlanningTable
-          planning={gefilterdePlanning}
-          onEdit={(planning) => {
-            setGeselecteerdePlanning(planning);
-            setToonForm(true);
-          }}
-          onDelete={verwijderPlanning}
-        />
+        {weergave === "lijst" && (
+          <>
+            <input
+              type="text"
+              placeholder="🔍 Zoek medewerker of terminal..."
+              value={zoekterm}
+              onChange={(e) => setZoekterm(e.target.value)}
+            />
+
+            <br />
+            <br />
+
+            <PlanningTable
+              planning={gefilterdePlanning}
+              onEdit={(planning) => {
+                setGeselecteerdePlanning(planning);
+                setToonForm(true);
+              }}
+              onDelete={verwijderPlanning}
+            />
+          </>
+        )}
+
+        {weergave === "week" && <WeekPlanner />}
       </div>
 
       {toonForm && (
         <div className="modal">
           <div className="modal-content">
-
             <PlanningForm
               planning={geselecteerdePlanning}
               onSaved={() => {
@@ -117,7 +138,6 @@ export default function Planning() {
             >
               Sluiten
             </button>
-
           </div>
         </div>
       )}
