@@ -15,6 +15,8 @@ export default function Terminals() {
 
     if (!error) {
       setTerminals(data);
+    } else {
+      console.log(error);
     }
   }
 
@@ -22,23 +24,9 @@ export default function Terminals() {
     laadTerminals();
   }, []);
 
-  async function verwijderTerminal(id) {
-    if (!confirm("Weet je zeker dat je deze terminal wilt verwijderen?")) {
-      return;
-    }
-
-    const { error } = await supabase
-      .from("terminals")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    laadTerminals();
-  }
+  const gefilterdeTerminals = terminals.filter((t) =>
+    t.naam.toLowerCase().includes(zoekterm.toLowerCase())
+  );
 
   return (
     <>
@@ -76,39 +64,17 @@ export default function Terminals() {
               <th>Naam</th>
               <th>Locatie</th>
               <th>Status</th>
-              <th>Acties</th>
             </tr>
           </thead>
 
           <tbody>
-            {terminals
-              .filter((t) =>
-                t.naam.toLowerCase().includes(zoekterm.toLowerCase())
-              )
-              .map((t) => (
-                <tr key={t.id}>
-                  <td>{t.naam}</td>
-                  <td>{t.locatie}</td>
-                  <td>{t.status}</td>
-
-                  <td>
-                    <button className="new-btn">
-                      ✏️
-                    </button>
-
-                    <button
-                      className="new-btn"
-                      style={{
-                        marginLeft: "10px",
-                        background: "#dc3545",
-                      }}
-                      onClick={() => verwijderTerminal(t.id)}
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-              ))}
+            {gefilterdeTerminals.map((terminal) => (
+              <tr key={terminal.id}>
+                <td>{terminal.naam}</td>
+                <td>{terminal.locatie}</td>
+                <td>{terminal.status}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

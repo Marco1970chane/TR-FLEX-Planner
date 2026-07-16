@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 
-export default function PlanningForm({ onSaved }) {
+export default function PlanningForm({ onSaved, planning }) {
   const [datum, setDatum] = useState("");
   const [dienst, setDienst] = useState("");
   const [terminal, setTerminal] = useState("");
@@ -14,6 +14,15 @@ export default function PlanningForm({ onSaved }) {
     laadMedewerkers();
     laadTerminals();
   }, []);
+
+  useEffect(() => {
+    if (planning) {
+      setDatum(planning.datum);
+      setDienst(planning.dienst);
+      setTerminal(planning.terminal);
+      setMedewerker(planning.medewerker);
+    }
+  }, [planning]);
 
   async function laadMedewerkers() {
     const { data, error } = await supabase
@@ -40,40 +49,67 @@ export default function PlanningForm({ onSaved }) {
   async function opslaan(e) {
     e.preventDefault();
 
-    const { error } = await supabase
-      .from("planning")
-      .insert([
-        {
+    let error;
+
+    if (planning) {
+      const result = await supabase
+        .from("planning")
+        .update({
           datum,
           dienst,
           terminal,
           medewerker,
-          status: "Ingepland",
-        },
-      ]);
+        })
+        .eq("id", planning.id);
+
+      error = result.error;
+    } else {
+      const result = await supabase
+        .from("planning")
+        .insert([
+          {
+            datum,
+            dienst,
+            terminal,
+            medewerker,
+            status: "Ingepland",
+          },
+        ]);
+
+      error = result.error;
+    }
 
     if (error) {
       alert(error.message);
       return;
     }
 
-    alert("Dienst opgeslagen!");
-
-    if (onSaved) {
-      onSaved();
-    }
+    alert(
+      planning
+        ? "✅ Dienst bijgewerkt!"
+        : "✅ Dienst opgeslagen!"
+    );
 
     setDatum("");
     setDienst("");
     setTerminal("");
     setMedewerker("");
+
+    if (onSaved) {
+      onSaved();
+    }
   }
 
   return (
     <form onSubmit={opslaan}>
-      <h2>📅 Nieuwe dienst</h2>
+      <h2>
+        {planning
+          ? "✏️ Dienst bewerken"
+          : "📅 Nieuwe dienst"}
+      </h2>
 
       <label>Datum</label>
+
       <input
         type="date"
         value={datum}
@@ -82,51 +118,81 @@ export default function PlanningForm({ onSaved }) {
       />
 
       <label>Dienst</label>
+
       <select
         value={dienst}
         onChange={(e) => setDienst(e.target.value)}
         required
       >
         <option value="">Kies een dienst...</option>
-        <option>06:00-14:00</option>
-        <option>07:00-15:00</option>
-        <option>10:00-18:00</option>
-        <option>14:00-22:00</option>
-        <option>22:00-06:00</option>
+        <option value="06:00-14:00">
+          06:00-14:00
+        </option>
+        <option value="07:00-15:00">
+          07:00-15:00
+        </option>
+        <option value="10:00-18:00">
+          10:00-18:00
+        </option>
+        <option value="14:00-22:00">
+          14:00-22:00
+        </option>
+        <option value="22:00-06:00">
+          22:00-06:00
+        </option>
       </select>
 
       <label>Terminal</label>
+
       <select
         value={terminal}
         onChange={(e) => setTerminal(e.target.value)}
         required
       >
-        <option value="">Kies terminal...</option>
+        <option value="">
+          Kies terminal...
+        </option>
 
         {terminals.map((t) => (
-          <option key={t.id} value={t.naam}>
+          <option
+            key={t.id}
+            value={t.naam}
+          >
             {t.naam}
           </option>
         ))}
       </select>
 
       <label>Medewerker</label>
+
       <select
         value={medewerker}
-        onChange={(e) => setMedewerker(e.target.value)}
+        onChange={(e) =>
+          setMedewerker(e.target.value)
+        }
         required
       >
-        <option value="">Kies medewerker...</option>
+        <option value="">
+          Kies medewerker...
+        </option>
 
         {medewerkers.map((m) => (
-          <option key={m.id} value={m.naam}>
+          <option
+            key={m.id}
+            value={m.naam}
+          >
             {m.naam}
           </option>
         ))}
       </select>
 
-      <button className="new-btn" type="submit">
-        Opslaan
+      <button
+        className="new-btn"
+        type="submit"
+      >
+        {planning
+          ? "💾 Wijzigen"
+          : "💾 Opslaan"}
       </button>
     </form>
   );

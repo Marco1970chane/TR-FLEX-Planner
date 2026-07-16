@@ -24,8 +24,14 @@ export default function TerminalForm({ onSaved }) {
       return;
     }
 
-    alert("Terminal opgeslagen!");
+    alert("✅ Terminal opgeslagen!");
 
+    // Formulier leegmaken
+    setNaam("");
+    setLocatie("");
+    setStatus("Actief");
+
+    // Pagina verversen en popup sluiten
     if (onSaved) {
       onSaved();
     }
@@ -37,15 +43,19 @@ export default function TerminalForm({ onSaved }) {
 
       <label>Naam</label>
       <input
+        type="text"
         value={naam}
         onChange={(e) => setNaam(e.target.value)}
+        placeholder="Bijvoorbeeld Wilmar Truck Loading"
         required
       />
 
       <label>Locatie</label>
       <input
+        type="text"
         value={locatie}
         onChange={(e) => setLocatie(e.target.value)}
+        placeholder="Bijvoorbeeld Rotterdam"
         required
       />
 
@@ -54,12 +64,12 @@ export default function TerminalForm({ onSaved }) {
         value={status}
         onChange={(e) => setStatus(e.target.value)}
       >
-        <option>Actief</option>
-        <option>Inactief</option>
+        <option value="Actief">Actief</option>
+        <option value="Inactief">Inactief</option>
       </select>
 
       <button className="new-btn" type="submit">
-        Opslaan
+        💾 Opslaan
       </button>
     </form>
   );

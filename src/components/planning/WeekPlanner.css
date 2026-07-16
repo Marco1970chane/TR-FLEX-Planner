@@ -1,0 +1,53 @@
+.weekplanner{
+    background:white;
+    border-radius:12px;
+    padding:25px;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+
+.planner-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:25px;
+}
+
+.planner-buttons{
+    display:flex;
+    gap:10px;
+}
+
+.planner-grid{
+    display:grid;
+    grid-template-columns:220px repeat(7,1fr);
+}
+
+.corner{
+    height:50px;
+}
+
+.day-header{
+    background:#2563EB;
+    color:white;
+    padding:15px;
+    text-align:center;
+    font-weight:bold;
+}
+
+.employee{
+    background:#F8FAFC;
+    padding:15px;
+    font-weight:bold;
+    border:1px solid #E5E7EB;
+}
+
+.planner-cell{
+    min-height:90px;
+    border:1px solid #E5E7EB;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.planner-cell:hover{
+    background:#EFF6FF;
+}
