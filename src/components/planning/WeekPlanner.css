@@ -1,3 +1,12 @@
+@media (max-width:1200px){
+
+  .planner-grid{
+    overflow-x:auto;
+    display:grid;
+    grid-template-columns:180px repeat(7,180px);
+  }
+
+}
 .weekplanner {
   background: white;
   border-radius: 12px;
@@ -71,12 +80,58 @@
   font-size: 14px;
 }
 
-@media (max-width:1200px){
 
-  .planner-grid{
-    overflow-x:auto;
-    display:grid;
-    grid-template-columns:180px repeat(7,180px);
-  }
+  
+  
 
+
+  
+
+.dienst-card {
+  color: white;
+  border-radius: 10px;
+  padding: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+
+.dienst-card:hover {
+  transform: scale(1.03);
+}
+
+/* Wilmar */
+.dienst-card.wilmar {
+  background: #2e7d32;
+}
+
+/* Chane */
+.dienst-card.chane {
+  background: #1565c0;
+}
+
+/* LBC */
+.dienst-card.lbc {
+  background: #6a1b9a;
+}
+
+/* Standic */
+.dienst-card.standic {
+  background: #ef6c00;
+}
+
+/* Exolum */
+.dienst-card.exolum {
+  background: #c62828;
+}
+
+/* Aglobis */
+.dienst-card.aglobis {
+  background: #00838f;
+}
+
+/* Tepsa */
+.dienst-card.tepsa {
+  background: #455a64;
 }

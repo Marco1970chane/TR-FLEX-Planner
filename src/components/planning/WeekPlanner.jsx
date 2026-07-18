@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../services/supabase";
 import "./WeekPlanner.css";
+import PlanningCard from "./PlanningCard";
 
 import {
   startOfWeek,
@@ -11,11 +12,14 @@ import {
   isWithinInterval,
 } from "date-fns";
 
-import { nl } from "date-fns/locale/nl";
+import { nl } from "date-fns/locale";
 
-export default function WeekPlanner() {
+export default function WeekPlanner({
+  planning = [],
+  onNieuweDienst,
+  onEditDienst,
+}) {
   const [medewerkers, setMedewerkers] = useState([]);
-  const [planning, setPlanning] = useState([]);
 
   const [weekStart, setWeekStart] = useState(
     startOfWeek(new Date(), {
@@ -25,7 +29,6 @@ export default function WeekPlanner() {
 
   useEffect(() => {
     laadMedewerkers();
-    laadPlanning();
   }, []);
 
   async function laadMedewerkers() {
@@ -36,16 +39,6 @@ export default function WeekPlanner() {
 
     if (!error) {
       setMedewerkers(data);
-    }
-  }
-
-  async function laadPlanning() {
-    const { data, error } = await supabase
-      .from("planning")
-      .select("*");
-
-    if (!error) {
-      setPlanning(data);
     }
   }
 
@@ -61,26 +54,20 @@ export default function WeekPlanner() {
   });
 
   function dienstVanDag(naam, datum) {
-    return planningDezeWeek.find((p) => {
-      return (
+    return planningDezeWeek.find(
+      (p) =>
         p.medewerker === naam &&
         isSameDay(new Date(p.datum), datum)
-      );
-    });
+    );
   }
 
   const dagen = [];
 
-for (let i = 0; i < 7; i++) {
-  dagen.push(addDays(weekStart, i));
-}
+  for (let i = 0; i < 7; i++) {
+    dagen.push(addDays(weekStart, i));
+  }
 
-return (
-
-  
-    
-
-      
+  return (
     <div className="weekplanner">
       <div className="planner-header">
         <button
@@ -109,15 +96,21 @@ return (
         <div className="corner"></div>
 
         {dagen.map((dag) => (
-          <div key={dag.toISOString()} className="day-header">
+          <div
+            key={dag.toISOString()}
+            className="day-header"
+          >
             <div>{format(dag, "EEE", { locale: nl })}</div>
             <strong>{format(dag, "dd-MM")}</strong>
           </div>
         ))}
 
         {medewerkers.map((m) => (
-          <>
-            <div key={m.id} className="employee">
+          <div
+            key={m.id}
+            style={{ display: "contents" }}
+          >
+            <div className="employee">
               👷 {m.naam}
             </div>
 
@@ -128,20 +121,31 @@ return (
                 <div
                   key={`${m.id}-${dag.toISOString()}`}
                   className="planner-cell"
+                  onClick={() => {
+                    if (!dienst && onNieuweDienst) {
+                      onNieuweDienst(
+                        format(dag, "yyyy-MM-dd"),
+                        m.naam
+                      );
+                    }
+                  }}
                 >
                   {dienst && (
-                    <div className="dienst-card">
-                      <strong>🚢 {dienst.terminal}</strong>
+                    <PlanningCard
+                      dienst={dienst}
+                      onClick={(e) => {
+                        e.stopPropagation();
 
-                      <div>🕒 {dienst.dienst}</div>
-
-                      <small>{dienst.status}</small>
-                    </div>
+                        if (onEditDienst) {
+                          onEditDienst(dienst);
+                        }
+                      }}
+                    />
                   )}
                 </div>
               );
             })}
-          </>
+          </div>
         ))}
       </div>
     </div>

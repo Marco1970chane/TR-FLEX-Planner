@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 
-export default function PlanningForm({ onSaved, planning }) {
+export default function PlanningForm({
+  onSaved,
+  planning,
+  defaultDatum = "",
+  defaultMedewerker = "",
+}) {
   const [datum, setDatum] = useState("");
   const [dienst, setDienst] = useState("");
   const [terminal, setTerminal] = useState("");
@@ -14,15 +19,25 @@ export default function PlanningForm({ onSaved, planning }) {
     laadMedewerkers();
     laadTerminals();
   }, []);
+useEffect(() => {
+  if (!planning?.id) {
+    setDatum(defaultDatum || "");
+    setMedewerker(defaultMedewerker || "");
+  }
+}, [defaultDatum, defaultMedewerker, planning]);
+  
+    
+    
+  
 
-  useEffect(() => {
-    if (planning) {
-      setDatum(planning.datum);
-      setDienst(planning.dienst);
-      setTerminal(planning.terminal);
-      setMedewerker(planning.medewerker);
-    }
-  }, [planning]);
+useEffect(() => {
+  if (planning?.id) {
+    setDatum(planning.datum || "");
+    setDienst(planning.dienst || "");
+    setTerminal(planning.terminal || "");
+    setMedewerker(planning.medewerker || "");
+  }
+}, [planning]);
 
   async function laadMedewerkers() {
     const { data, error } = await supabase
@@ -51,7 +66,7 @@ export default function PlanningForm({ onSaved, planning }) {
 
     let error;
 
-    if (planning) {
+    if (planning?.id != null) {
       const result = await supabase
         .from("planning")
         .update({
@@ -85,7 +100,7 @@ export default function PlanningForm({ onSaved, planning }) {
     }
 
     alert(
-      planning
+      planning?.id
         ? "✅ Dienst bijgewerkt!"
         : "✅ Dienst opgeslagen!"
     );
@@ -103,9 +118,11 @@ export default function PlanningForm({ onSaved, planning }) {
   return (
     <form onSubmit={opslaan}>
       <h2>
-        {planning
-          ? "✏️ Dienst bewerken"
-          : "📅 Nieuwe dienst"}
+        {planning?.id
+  ? "✏️ Dienst bewerken"
+  : "📅 Nieuwe dienst"}
+          
+          
       </h2>
 
       <label>Datum</label>
@@ -190,7 +207,7 @@ export default function PlanningForm({ onSaved, planning }) {
         className="new-btn"
         type="submit"
       >
-        {planning
+        {planning?.id
           ? "💾 Wijzigen"
           : "💾 Opslaan"}
       </button>

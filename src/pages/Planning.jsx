@@ -113,20 +113,53 @@ export default function Planning() {
           </>
         )}
 
-        {weergave === "week" && <WeekPlanner />}
+        
+  {weergave === "week" && (
+  <WeekPlanner
+    planning={planning}
+    onNieuweDienst={(datum, medewerker) => {
+      setGeselecteerdePlanning({
+        datum,
+        medewerker,
+      });
+      setToonForm(true);
+    }}
+    onEditDienst={(dienst) => {
+      setGeselecteerdePlanning(dienst);
+      setToonForm(true);
+    }}
+  />
+)}
+    
+      
+        
+      
+      
+    
+  
+
       </div>
 
       {toonForm && (
         <div className="modal">
           <div className="modal-content">
             <PlanningForm
-              planning={geselecteerdePlanning}
-              onSaved={() => {
-                laadPlanning();
-                setToonForm(false);
-                setGeselecteerdePlanning(null);
-              }}
-            />
+  planning={geselecteerdePlanning}
+  defaultDatum={geselecteerdePlanning?.datum || ""}
+  defaultMedewerker={geselecteerdePlanning?.medewerker || ""}
+  onSaved={() => {
+    laadPlanning();
+    setToonForm(false);
+    setGeselecteerdePlanning(null);
+  }}
+/>
+              
+              
+                
+                
+                
+              
+            
 
             <button
               className="new-btn"
