@@ -1,25 +1,49 @@
+import "./WeekPlanner.css";
+
+function terminalClass(terminal = "") {
+  const t = terminal.toLowerCase();
+
+  if (t.includes("wilmar")) return "wilmar";
+  if (t.includes("chane")) return "chane";
+  if (t.includes("lbc")) return "lbc";
+  if (t.includes("standic")) return "standic";
+  if (t.includes("exolum")) return "exolum";
+  if (t.includes("aglobis")) return "aglobis";
+  if (t.includes("tepsa")) return "tepsa";
+
+  return "";
+}
+
 export default function PlanningCard({ dienst, onClick }) {
-  function getClassName() {
-    const terminal = (dienst.terminal || "").toLowerCase();
-
-    if (terminal.includes("wilmar")) return "dienst-card wilmar";
-    if (terminal.includes("chane")) return "dienst-card chane";
-    if (terminal.includes("lbc")) return "dienst-card lbc";
-    if (terminal.includes("standic")) return "dienst-card standic";
-    if (terminal.includes("exolum")) return "dienst-card exolum";
-    if (terminal.includes("aglobis")) return "dienst-card aglobis";
-    if (terminal.includes("tepsa")) return "dienst-card tepsa";
-
-    return "dienst-card";
-  }
-
   return (
-    <div className={getClassName()} onClick={onClick}>
-      <strong>🚢 {dienst.terminal}</strong>
+    <div
+      className={`dienst-card ${terminalClass(dienst.terminal)}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      <div className="dienst-header">
+        <strong>{dienst.terminal || "Geen terminal"}</strong>
 
-      <div>🕒 {dienst.dienst}</div>
+        {dienst.status && (
+          <span className="dienst-status">
+            {dienst.status}
+          </span>
+        )}
+      </div>
 
-      <small>{dienst.status || "Ingepland"}</small>
+      {(dienst.starttijd || dienst.eindtijd) && (
+        <div className="dienst-tijd">
+          🕒 {dienst.starttijd || "--:--"} - {dienst.eindtijd || "--:--"}
+        </div>
+      )}
+
+      {dienst.opmerking && (
+        <div className="dienst-opmerking">
+          {dienst.opmerking}
+        </div>
+      )}
     </div>
   );
 }

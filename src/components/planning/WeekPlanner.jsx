@@ -1,151 +1,176 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../services/supabase";
+import { Fragment, useMemo, useState } from "react";
 import "./WeekPlanner.css";
 import PlanningCard from "./PlanningCard";
 
-import {
-  startOfWeek,
-  addWeeks,
-  addDays,
-  format,
-  isSameDay,
-  isWithinInterval,
-} from "date-fns";
+const dagen = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
 
-import { nl } from "date-fns/locale";
+function beginVanWeek(datum = new Date()) {
+  const d = new Date(datum);
+  const dag = d.getDay();
+  const verschil = dag === 0 ? -6 : 1 - dag;
+
+  d.setDate(d.getDate() + verschil);
+  d.setHours(0, 0, 0, 0);
+
+  return d;
+}
+
+function formatDatum(d) {
+  return d.toISOString().split("T")[0];
+}
+
+function getWeekNumber(date) {
+  const d = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  );
+
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
 
 export default function WeekPlanner({
-  planning = [],
+  planning,
   onNieuweDienst,
   onEditDienst,
 }) {
-  const [medewerkers, setMedewerkers] = useState([]);
+  const [weekStart, setWeekStart] = useState(beginVanWeek());
 
-  const [weekStart, setWeekStart] = useState(
-    startOfWeek(new Date(), {
-      weekStartsOn: 1,
-    })
-  );
+  const weekDagen = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const datum = new Date(weekStart);
+      datum.setDate(weekStart.getDate() + i);
 
-  useEffect(() => {
-    laadMedewerkers();
-  }, []);
-
-  async function laadMedewerkers() {
-    const { data, error } = await supabase
-      .from("medewerkers")
-      .select("*")
-      .order("naam");
-
-    if (!error) {
-      setMedewerkers(data);
-    }
-  }
-
-  const weekEinde = addDays(weekStart, 6);
-
-  const planningDezeWeek = planning.filter((p) => {
-    const datum = new Date(p.datum);
-
-    return isWithinInterval(datum, {
-      start: weekStart,
-      end: weekEinde,
+      return {
+        label: dagen[i],
+        datum,
+        key: formatDatum(datum),
+      };
     });
-  });
+  }, [weekStart]);
 
-  function dienstVanDag(naam, datum) {
-    return planningDezeWeek.find(
-      (p) =>
-        p.medewerker === naam &&
-        isSameDay(new Date(p.datum), datum)
-    );
+  const medewerkers = useMemo(() => {
+    return [...new Set(planning.map((p) => p.medewerker))]
+      .filter(Boolean)
+      .sort();
+  }, [planning]);
+
+  const planningMap = useMemo(() => {
+    const map = {};
+
+    planning.forEach((dienst) => {
+      const key = `${dienst.medewerker}-${dienst.datum}`;
+
+      if (!map[key]) {
+        map[key] = [];
+      }
+
+      map[key].push(dienst);
+    });
+
+    return map;
+  }, [planning]);
+
+  const weekNummer = getWeekNumber(weekStart);
+
+  function vorigeWeek() {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() - 7);
+    setWeekStart(d);
   }
 
-  const dagen = [];
+  function volgendeWeek() {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + 7);
+    setWeekStart(d);
+  }
 
-  for (let i = 0; i < 7; i++) {
-    dagen.push(addDays(weekStart, i));
+  function vandaag() {
+    setWeekStart(beginVanWeek());
   }
 
   return (
     <div className="weekplanner">
       <div className="planner-header">
-        <button
-          className="new-btn"
-          onClick={() => setWeekStart(addWeeks(weekStart, -1))}
-        >
-          ◀ Vorige
+        <button className="new-btn" onClick={vorigeWeek}>
+          ◀
         </button>
 
-        <h2>
-          Week van{" "}
-          {format(weekStart, "dd MMMM yyyy", {
-            locale: nl,
-          })}
-        </h2>
+        <button className="new-btn" onClick={vandaag}>
+          Vandaag
+        </button>
 
-        <button
-          className="new-btn"
-          onClick={() => setWeekStart(addWeeks(weekStart, 1))}
-        >
-          Volgende ▶
+        <h3>
+          Week {weekNummer} ·{" "}
+          {weekDagen[0].datum.toLocaleDateString("nl-NL", {
+            day: "numeric",
+            month: "long",
+          })}{" "}
+          –{" "}
+          {weekDagen[6].datum.toLocaleDateString("nl-NL", {
+            day: "numeric",
+            month: "long",
+          })}
+        </h3>
+
+        <button className="new-btn" onClick={volgendeWeek}>
+          ▶
         </button>
       </div>
 
       <div className="planner-grid">
         <div className="corner"></div>
 
-        {dagen.map((dag) => (
-          <div
-            key={dag.toISOString()}
-            className="day-header"
-          >
-            <div>{format(dag, "EEE", { locale: nl })}</div>
-            <strong>{format(dag, "dd-MM")}</strong>
+        {weekDagen.map((dag) => (
+          <div key={dag.key} className="day-header">
+            <strong>{dag.label}</strong>
+            <br />
+            {dag.datum.toLocaleDateString("nl-NL", {
+              day: "2-digit",
+              month: "2-digit",
+            })}
           </div>
         ))}
 
-        {medewerkers.map((m) => (
-          <div
-            key={m.id}
-            style={{ display: "contents" }}
-          >
-            <div className="employee">
-              👷 {m.naam}
-            </div>
+        {medewerkers.map((medewerker) => (
+          <Fragment key={medewerker}>
+            <div className="employee">{medewerker}</div>
 
-            {dagen.map((dag) => {
-              const dienst = dienstVanDag(m.naam, dag);
+            {weekDagen.map((dag) => {
+              const diensten =
+                planningMap[`${medewerker}-${dag.key}`] || [];
 
               return (
                 <div
-                  key={`${m.id}-${dag.toISOString()}`}
+                  key={`${medewerker}-${dag.key}`}
                   className="planner-cell"
                   onClick={() => {
-                    if (!dienst && onNieuweDienst) {
-                      onNieuweDienst(
-                        format(dag, "yyyy-MM-dd"),
-                        m.naam
-                      );
+                    if (diensten.length === 0) {
+                      onNieuweDienst(dag.key, medewerker);
                     }
                   }}
                 >
-                  {dienst && (
+                  {diensten.map((dienst) => (
                     <PlanningCard
-                      dienst={dienst}
-                      onClick={(e) => {
-                        e.stopPropagation();
-
-                        if (onEditDienst) {
-                          onEditDienst(dienst);
-                        }
-                      }}
-                    />
-                  )}
+  key={dienst.id}
+  dienst={dienst}
+  onClick={() => onEditDienst(dienst)}
+/>
+                      
+                      
+                      
+                        
+                        
+                      
+                    
+                  ))}
                 </div>
               );
             })}
-          </div>
+          </Fragment>
         ))}
       </div>
     </div>
