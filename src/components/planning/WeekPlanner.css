@@ -12,7 +12,13 @@
   border-radius: 12px;
   padding: 25px;
   box-shadow: 0 3px 12px rgba(0,0,0,.08);
+  overflow-x: auto;
 }
+  
+  
+  
+  
+
 
 .planner-header {
   display: flex;
@@ -304,4 +310,42 @@
   background: #ca8a04;
   border-left-color: #713f12;
   color: white;
+}
+@media (max-width: 768px) {
+
+  .planner-header {
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .planner-header h3 {
+    width: 100%;
+    text-align: center;
+    font-size: 18px;
+    margin: 10px 0;
+  }
+
+  .new-btn {
+    min-width: 90px;
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+}
+@media (max-width: 768px) {
+
+  .planner-grid {
+    min-width: 1200px;
+  }
+
+  .employee {
+    min-width: 180px;
+    font-size: 15px;
+  }
+
+  .planner-cell {
+    min-height: 100px;
+  }
+
 }

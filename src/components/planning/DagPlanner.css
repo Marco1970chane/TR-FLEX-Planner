@@ -1,0 +1,43 @@
+.dagplanner {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+.dagplanner-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.dagplanner-header h3 {
+  margin: 0;
+  min-width: 180px;
+  text-align: center;
+}
+
+.dagplanner-header button {
+  padding: 8px 14px;
+}
+
+.dagplanner-lijst {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.dagplanner .new-btn {
+  width: 100%;
+}
+
+@media (min-width: 769px) {
+  .dagplanner {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+}

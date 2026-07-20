@@ -3,6 +3,7 @@ import { supabase } from "../services/supabase";
 import PlanningForm from "../components/PlanningForm";
 import PlanningTable from "../components/planning/PlanningTable";
 import WeekPlanner from "../components/planning/WeekPlanner";
+import DagPlanner from "../components/planning/DagPlanner";
 
 export default function Planning() {
   const [planning, setPlanning] = useState([]);
@@ -10,6 +11,7 @@ export default function Planning() {
   const [geselecteerdePlanning, setGeselecteerdePlanning] = useState(null);
   const [zoekterm, setZoekterm] = useState("");
   const [weergave, setWeergave] = useState("lijst");
+  const isMobiel = true;
 
   useEffect(() => {
     laadPlanning();
@@ -49,10 +51,11 @@ export default function Planning() {
       p.medewerker?.toLowerCase().includes(zoekterm.toLowerCase()) ||
       p.terminal?.toLowerCase().includes(zoekterm.toLowerCase())
   );
-
+console.log("Breedte:", window.innerWidth);
   return (
     <>
       <div className="table">
+        <h1 style={{ color: "red" }}>TEST V2</h1>
         <div
           style={{
             display: "flex",
@@ -62,6 +65,7 @@ export default function Planning() {
           }}
         >
           <h2>📅 Planning</h2>
+          <p>Breedte scherm: {window.innerWidth}px</p>
 
           <button
             className="new-btn"
@@ -114,22 +118,53 @@ export default function Planning() {
         )}
 
         
-  {weergave === "week" && (
-  <WeekPlanner
-    planning={planning}
-    onNieuweDienst={(datum, medewerker) => {
-      setGeselecteerdePlanning({
-        datum,
-        medewerker,
-      });
-      setToonForm(true);
-    }}
-    onEditDienst={(dienst) => {
-      setGeselecteerdePlanning(dienst);
-      setToonForm(true);
-    }}
-  />
-)}
+  {weergave === "week" &&
+  (isMobiel ? (
+    <DagPlanner
+      planning={planning}
+      onNieuweDienst={(datum, medewerker) => {
+        setGeselecteerdePlanning({
+          datum,
+          medewerker,
+        });
+        setToonForm(true);
+      }}
+      onEditDienst={(dienst) => {
+        setGeselecteerdePlanning(dienst);
+        setToonForm(true);
+      }}
+    />
+  ) : (
+    <WeekPlanner
+      planning={planning}
+      onNieuweDienst={(datum, medewerker) => {
+        setGeselecteerdePlanning({
+          datum,
+          medewerker,
+        });
+        setToonForm(true);
+      }}
+      onEditDienst={(dienst) => {
+        setGeselecteerdePlanning(dienst);
+        setToonForm(true);
+      }}
+    />
+  ))}
+  
+    
+    
+      
+        
+        
+      
+      
+    
+    
+      
+      
+    
+  
+
     
       
         
