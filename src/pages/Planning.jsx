@@ -18,17 +18,17 @@ export default function Planning() {
     laadPlanning();
   }, []);
 
-  // Schermgrootte bijhouden
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobiel(window.innerWidth <= 900);
-    };
 
-    handleResize();
-    window.addEventListener("resize", handleResize);
+  
+    
+    
+    
 
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    
+    
+
+    
+
 
   async function laadPlanning() {
     const { data, error } = await supabase
