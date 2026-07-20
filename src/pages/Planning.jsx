@@ -11,7 +11,7 @@ export default function Planning() {
   const [geselecteerdePlanning, setGeselecteerdePlanning] = useState(null);
   const [zoekterm, setZoekterm] = useState("");
   const [weergave, setWeergave] = useState("lijst");
-  const [isMobiel, setIsMobiel] = useState(window.innerWidth <= 768);
+  const isMobiel = window.matchMedia("(max-width: 900px)").matches;
 
   // Planning laden
   useEffect(() => {
@@ -21,7 +21,7 @@ export default function Planning() {
   // Schermgrootte bijhouden
   useEffect(() => {
     const handleResize = () => {
-      setIsMobiel(window.innerWidth <= 768);
+      setIsMobiel(window.innerWidth <= 900);
     };
 
     handleResize();
