@@ -11,10 +11,23 @@ export default function Planning() {
   const [geselecteerdePlanning, setGeselecteerdePlanning] = useState(null);
   const [zoekterm, setZoekterm] = useState("");
   const [weergave, setWeergave] = useState("lijst");
-  const isMobiel = true;
+  const [isMobiel, setIsMobiel] = useState(window.innerWidth <= 768);
 
+  // Planning laden
   useEffect(() => {
     laadPlanning();
+  }, []);
+
+  // Schermgrootte bijhouden
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobiel(window.innerWidth <= 768);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   async function laadPlanning() {
@@ -51,24 +64,29 @@ export default function Planning() {
       p.medewerker?.toLowerCase().includes(zoekterm.toLowerCase()) ||
       p.terminal?.toLowerCase().includes(zoekterm.toLowerCase())
   );
-console.log("Breedte:", window.innerWidth);
+
   return (
     <>
       <div className="table">
+
+        {/* Tijdelijke test */}
         <h1 style={{ color: "red" }}>TEST V2</h1>
+
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom: "20px",
+            flexWrap: "wrap",
+            gap: "10px",
           }}
         >
           <h2>📅 Planning</h2>
+
           <p style={{ color: "red", fontWeight: "bold" }}>
-  TEST V2 - 20 juli
-</p>
-          <p>Breedte scherm: {window.innerWidth}px</p>
+            Breedte: {window.innerWidth}px | isMobiel: {isMobiel ? "JA" : "NEE"}
+          </p>
 
           <button
             className="new-btn"
@@ -120,84 +138,53 @@ console.log("Breedte:", window.innerWidth);
           </>
         )}
 
-        
-  {weergave === "week" &&
-  (isMobiel ? (
-    <DagPlanner
-      planning={planning}
-      onNieuweDienst={(datum, medewerker) => {
-        setGeselecteerdePlanning({
-          datum,
-          medewerker,
-        });
-        setToonForm(true);
-      }}
-      onEditDienst={(dienst) => {
-        setGeselecteerdePlanning(dienst);
-        setToonForm(true);
-      }}
-    />
-  ) : (
-    <WeekPlanner
-      planning={planning}
-      onNieuweDienst={(datum, medewerker) => {
-        setGeselecteerdePlanning({
-          datum,
-          medewerker,
-        });
-        setToonForm(true);
-      }}
-      onEditDienst={(dienst) => {
-        setGeselecteerdePlanning(dienst);
-        setToonForm(true);
-      }}
-    />
-  ))}
-  
-    
-    
-      
-        
-        
-      
-      
-    
-    
-      
-      
-    
-  
-
-    
-      
-        
-      
-      
-    
-  
-
+        {weergave === "week" &&
+          (isMobiel ? (
+            <DagPlanner
+              planning={planning}
+              onNieuweDienst={(datum, medewerker) => {
+                setGeselecteerdePlanning({
+                  datum,
+                  medewerker,
+                });
+                setToonForm(true);
+              }}
+              onEditDienst={(dienst) => {
+                setGeselecteerdePlanning(dienst);
+                setToonForm(true);
+              }}
+            />
+          ) : (
+            <WeekPlanner
+              planning={planning}
+              onNieuweDienst={(datum, medewerker) => {
+                setGeselecteerdePlanning({
+                  datum,
+                  medewerker,
+                });
+                setToonForm(true);
+              }}
+              onEditDienst={(dienst) => {
+                setGeselecteerdePlanning(dienst);
+                setToonForm(true);
+              }}
+            />
+          ))}
       </div>
 
       {toonForm && (
         <div className="modal">
           <div className="modal-content">
             <PlanningForm
-  planning={geselecteerdePlanning}
-  defaultDatum={geselecteerdePlanning?.datum || ""}
-  defaultMedewerker={geselecteerdePlanning?.medewerker || ""}
-  onSaved={() => {
-    laadPlanning();
-    setToonForm(false);
-    setGeselecteerdePlanning(null);
-  }}
-/>
-              
-              
-                
-                
-                
-              
-            
+              planning={geselecteerdePlanning}
+              defaultDatum={geselecteerdePlanning?.datum || ""}
+              defaultMedewerker={geselecteerdePlanning?.medewerker || ""}
+              onSaved={() => {
+                laadPlanning();
+                setToonForm(false);
+                setGeselecteerdePlanning(null);
+              }}
+            />
 
             <button
               className="new-btn"
