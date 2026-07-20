@@ -65,6 +65,9 @@ console.log("Breedte:", window.innerWidth);
           }}
         >
           <h2>📅 Planning</h2>
+          <p style={{ color: "red", fontWeight: "bold" }}>
+  TEST V2 - 20 juli
+</p>
           <p>Breedte scherm: {window.innerWidth}px</p>
 
           <button
