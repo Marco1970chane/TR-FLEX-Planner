@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSwipeable } from "react-swipeable";
 import PlanningCard from "./PlanningCard";
 import "./DagPlanner.css";
 
@@ -16,27 +17,46 @@ export default function DagPlanner({
 
     const vandaagString = vandaag.toISOString().split("T")[0];
 
-    // Is er een dienst vandaag?
-    const heeftVandaag = planning.some(
-      (p) => p.datum === vandaagString
-    );
-
-    if (heeftVandaag) {
+    // Is er planning vandaag?
+    if (planning.some((p) => p.datum === vandaagString)) {
       setDatum(vandaag);
       return;
     }
 
-    // Zoek eerstvolgende dag met planning
-    const uniekeDatums = [...new Set(planning.map((p) => p.datum))]
-      .sort();
+    // Zoek eerstvolgende datum met planning
+    const uniekeDatums = [...new Set(planning.map((p) => p.datum))].sort();
 
-    const volgendeDatum =
+    const volgende =
       uniekeDatums.find((d) => d >= vandaagString) || uniekeDatums[0];
 
-    if (volgendeDatum) {
-      setDatum(new Date(`${volgendeDatum}T00:00:00`));
+    if (volgende) {
+      setDatum(new Date(`${volgende}T00:00:00`));
     }
   }, [planning]);
+
+  function vorigeDag() {
+    const d = new Date(datum);
+    d.setDate(d.getDate() - 1);
+    setDatum(d);
+  }
+
+  function volgendeDag() {
+    const d = new Date(datum);
+    d.setDate(d.getDate() + 1);
+    setDatum(d);
+  }
+
+  function vandaag() {
+    setDatum(new Date());
+  }
+
+  const handlers = useSwipeable({
+    onSwipedLeft: volgendeDag,
+    onSwipedRight: vorigeDag,
+    preventScrollOnSwipe: true,
+    trackTouch: true,
+    trackMouse: false,
+  });
 
   const geselecteerdeDatum = datum.toISOString().split("T")[0];
 
@@ -44,24 +64,8 @@ export default function DagPlanner({
     (p) => p.datum === geselecteerdeDatum
   );
 
-  function vorigeDag() {
-    const nieuweDatum = new Date(datum);
-    nieuweDatum.setDate(nieuweDatum.getDate() - 1);
-    setDatum(nieuweDatum);
-  }
-
-  function volgendeDag() {
-    const nieuweDatum = new Date(datum);
-    nieuweDatum.setDate(nieuweDatum.getDate() + 1);
-    setDatum(nieuweDatum);
-  }
-
-  function vandaag() {
-    setDatum(new Date());
-  }
-
   return (
-    <div className="dagplanner">
+    <div className="dagplanner" {...handlers}>
       <h2>📅 DagPlanner</h2>
 
       <div
@@ -74,18 +78,38 @@ export default function DagPlanner({
         }}
       >
         <button onClick={vorigeDag}>⬅️</button>
-        <button onClick={vandaag}>Vandaag</button>
+
+        <button onClick={vandaag}>
+          Vandaag
+        </button>
+
         <button onClick={volgendeDag}>➡️</button>
       </div>
 
-      <h3>{datum.toLocaleDateString("nl-NL")}</h3>
+      <h3>
+        {datum.toLocaleDateString("nl-NL", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })}
+      </h3>
 
       <p>
-        <strong>{diensten.length}</strong> dienst(en)
+        <strong>{diensten.length}</strong>{" "}
+        {diensten.length === 1 ? "dienst" : "diensten"}
       </p>
 
       {diensten.length === 0 ? (
-        <p>Geen diensten op deze dag.</p>
+        <div
+          style={{
+            padding: "30px",
+            textAlign: "center",
+            color: "#777",
+          }}
+        >
+          Geen diensten gepland.
+        </div>
       ) : (
         <div
           style={{
@@ -99,8 +123,6 @@ export default function DagPlanner({
               key={dienst.id}
               dienst={dienst}
               onClick={() => onEdit?.(dienst)}
-                
-              
             />
           ))}
         </div>
