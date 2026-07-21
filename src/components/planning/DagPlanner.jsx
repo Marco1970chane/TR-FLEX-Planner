@@ -1,8 +1,9 @@
 import { useState } from "react";
+import PlanningCard from "./PlanningCard";
 import "./DagPlanner.css";
 
 export default function DagPlanner({ planning = [] }) {
-  // Start op een datum waarvan we weten dat er diensten zijn.
+  // Voor de test starten we op een datum waarvan we weten dat er diensten zijn.
   // Later veranderen we dit naar new Date().
   const [datum, setDatum] = useState(new Date("2026-07-08"));
 
@@ -55,24 +56,23 @@ export default function DagPlanner({ planning = [] }) {
       {diensten.length === 0 ? (
         <p>Geen diensten op deze dag.</p>
       ) : (
-        diensten.map((dienst) => (
-          <div
-            key={dienst.id}
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: "8px",
-              padding: "12px",
-              marginBottom: "10px",
-              background: "#fff",
-            }}
-          >
-            <strong>{dienst.medewerker}</strong>
-            <br />
-            {dienst.terminal}
-            <br />
-            {dienst.dienst}
-          </div>
-        ))
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          }}
+        >
+          {diensten.map((dienst) => (
+            <PlanningCard
+              key={dienst.id}
+              dienst={dienst}
+              onClick={() => {
+                // Hier koppelen we later het bewerkformulier.
+              }}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
