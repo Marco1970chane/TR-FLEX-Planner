@@ -1,8 +1,14 @@
 import { useState } from "react";
 import "./DagPlanner.css";
 
-export default function DagPlanner() {
-  const [datum, setDatum] = useState(new Date());
+export default function DagPlanner({ planning = [] }) {
+  const [datum] = useState(new Date());
+
+  const geselecteerdeDatum = datum.toISOString().split("T")[0];
+
+  const diensten = planning.filter(
+    (p) => p.datum === geselecteerdeDatum
+  );
 
   return (
     <div className="dagplanner">
@@ -10,9 +16,9 @@ export default function DagPlanner() {
 
       <h3>{datum.toLocaleDateString("nl-NL")}</h3>
 
-      <button onClick={() => setDatum(new Date())}>
-        Vandaag
-      </button>
+      <p>
+        Vandaag zijn er <strong>{diensten.length}</strong> dienst(en).
+      </p>
     </div>
   );
 }

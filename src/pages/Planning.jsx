@@ -113,7 +113,9 @@ export default function Planning() {
           </>
         )}
 
-        {weergave === "week" && <DagPlanner />}
+        {weergave === "week" && (
+  <DagPlanner planning={planning} />
+)}
       </div>
 
       {toonForm && (
