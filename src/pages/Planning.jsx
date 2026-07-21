@@ -3,7 +3,6 @@ import { supabase } from "../services/supabase";
 import PlanningForm from "../components/PlanningForm";
 import PlanningTable from "../components/planning/PlanningTable";
 import WeekPlanner from "../components/planning/WeekPlanner";
-import DagPlanner from "../components/planning/DagPlanner";
 
 export default function Planning() {
   const [planning, setPlanning] = useState([]);
@@ -11,24 +10,10 @@ export default function Planning() {
   const [geselecteerdePlanning, setGeselecteerdePlanning] = useState(null);
   const [zoekterm, setZoekterm] = useState("");
   const [weergave, setWeergave] = useState("lijst");
-  const isMobiel = window.matchMedia("(max-width: 900px)").matches;
 
-  // Planning laden
   useEffect(() => {
     laadPlanning();
   }, []);
-
-
-  
-    
-    
-    
-
-    
-    
-
-    
-
 
   async function laadPlanning() {
     const { data, error } = await supabase
@@ -68,25 +53,15 @@ export default function Planning() {
   return (
     <>
       <div className="table">
-
-        {/* Tijdelijke test */}
-        <h1 style={{ color: "red" }}>TEST V2</h1>
-
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom: "20px",
-            flexWrap: "wrap",
-            gap: "10px",
           }}
         >
           <h2>📅 Planning</h2>
-
-          <p style={{ color: "red", fontWeight: "bold" }}>
-            Breedte: {window.innerWidth}px | isMobiel: {isMobiel ? "JA" : "NEE"}
-          </p>
 
           <button
             className="new-btn"
@@ -138,38 +113,22 @@ export default function Planning() {
           </>
         )}
 
-        {weergave === "week" &&
-          (isMobiel ? (
-            <DagPlanner
-              planning={planning}
-              onNieuweDienst={(datum, medewerker) => {
-                setGeselecteerdePlanning({
-                  datum,
-                  medewerker,
-                });
-                setToonForm(true);
-              }}
-              onEditDienst={(dienst) => {
-                setGeselecteerdePlanning(dienst);
-                setToonForm(true);
-              }}
-            />
-          ) : (
-            <WeekPlanner
-              planning={planning}
-              onNieuweDienst={(datum, medewerker) => {
-                setGeselecteerdePlanning({
-                  datum,
-                  medewerker,
-                });
-                setToonForm(true);
-              }}
-              onEditDienst={(dienst) => {
-                setGeselecteerdePlanning(dienst);
-                setToonForm(true);
-              }}
-            />
-          ))}
+        {weergave === "week" && (
+          <WeekPlanner
+            planning={planning}
+            onNieuweDienst={(datum, medewerker) => {
+              setGeselecteerdePlanning({
+                datum,
+                medewerker,
+              });
+              setToonForm(true);
+            }}
+            onEditDienst={(dienst) => {
+              setGeselecteerdePlanning(dienst);
+              setToonForm(true);
+            }}
+          />
+        )}
       </div>
 
       {toonForm && (

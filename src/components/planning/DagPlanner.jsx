@@ -55,12 +55,30 @@ export default function DagPlanner({
         )}
 
         {diensten.map((dienst) => (
-          <PlanningCard
-            key={dienst.id}
-            dienst={dienst}
-            onClick={() => onEditDienst(dienst)}
-          />
-        ))}
+  <div
+    key={dienst.id}
+    style={{
+      border: "1px solid #ccc",
+      borderRadius: "8px",
+      padding: "10px",
+      marginBottom: "10px",
+      background: "#fff",
+    }}
+    onClick={() => onEditDienst(dienst)}
+  >
+    <strong>{dienst.medewerker}</strong>
+    <br />
+    {dienst.terminal}
+    <br />
+    {dienst.starttijd} - {dienst.eindtijd}
+  </div>
+))}
+          
+            
+            
+            
+          
+        
       </div>
 
       <button
