@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./DagPlanner.css";
 
 export default function DagPlanner({ planning = [] }) {
-  const [datum] = useState(new Date());
+  const [datum, setDatum] = useState(new Date("2026-07-08"));
 
   const geselecteerdeDatum = datum.toISOString().split("T")[0];
 
@@ -16,20 +16,26 @@ export default function DagPlanner({ planning = [] }) {
 
       <h3>{datum.toLocaleDateString("nl-NL")}</h3>
 
-      <p>Totaal aantal diensten: {planning.length}</p>
+      <p>Aantal diensten: {diensten.length}</p>
 
-<pre
-  style={{
-    background: "#f5f5f5",
-    padding: "10px",
-    overflow: "auto",
-    fontSize: "12px",
-  }}
->
-  {JSON.stringify(planning.slice(0, 5), null, 2)}
-</pre>
-        
-      
+      {diensten.map((dienst) => (
+        <div
+          key={dienst.id}
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            padding: "12px",
+            marginBottom: "10px",
+            background: "#fff",
+          }}
+        >
+          <strong>{dienst.medewerker}</strong>
+          <br />
+          {dienst.terminal}
+          <br />
+          {dienst.dienst}
+        </div>
+      ))}
     </div>
   );
 }
