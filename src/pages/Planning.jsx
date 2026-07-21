@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 import PlanningForm from "../components/PlanningForm";
 import PlanningTable from "../components/planning/PlanningTable";
-import WeekPlanner from "../components/planning/WeekPlanner";
+import DagPlanner from "../components/planning/DagPlanner";
 
 export default function Planning() {
   const [planning, setPlanning] = useState([]);
@@ -113,22 +113,7 @@ export default function Planning() {
           </>
         )}
 
-        {weergave === "week" && (
-          <WeekPlanner
-            planning={planning}
-            onNieuweDienst={(datum, medewerker) => {
-              setGeselecteerdePlanning({
-                datum,
-                medewerker,
-              });
-              setToonForm(true);
-            }}
-            onEditDienst={(dienst) => {
-              setGeselecteerdePlanning(dienst);
-              setToonForm(true);
-            }}
-          />
-        )}
+        {weergave === "week" && <DagPlanner />}
       </div>
 
       {toonForm && (
