@@ -1,11 +1,42 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PlanningCard from "./PlanningCard";
 import "./DagPlanner.css";
 
-export default function DagPlanner({ planning = [] }) {
-  // Voor de test starten we op een datum waarvan we weten dat er diensten zijn.
-  // Later veranderen we dit naar new Date().
-  const [datum, setDatum] = useState(new Date("2026-07-08"));
+export default function DagPlanner({
+  planning = [],
+  onEdit,
+}) {
+  const [datum, setDatum] = useState(new Date());
+
+  useEffect(() => {
+    if (planning.length === 0) return;
+
+    const vandaag = new Date();
+    vandaag.setHours(0, 0, 0, 0);
+
+    const vandaagString = vandaag.toISOString().split("T")[0];
+
+    // Is er een dienst vandaag?
+    const heeftVandaag = planning.some(
+      (p) => p.datum === vandaagString
+    );
+
+    if (heeftVandaag) {
+      setDatum(vandaag);
+      return;
+    }
+
+    // Zoek eerstvolgende dag met planning
+    const uniekeDatums = [...new Set(planning.map((p) => p.datum))]
+      .sort();
+
+    const volgendeDatum =
+      uniekeDatums.find((d) => d >= vandaagString) || uniekeDatums[0];
+
+    if (volgendeDatum) {
+      setDatum(new Date(`${volgendeDatum}T00:00:00`));
+    }
+  }, [planning]);
 
   const geselecteerdeDatum = datum.toISOString().split("T")[0];
 
@@ -67,9 +98,9 @@ export default function DagPlanner({ planning = [] }) {
             <PlanningCard
               key={dienst.id}
               dienst={dienst}
-              onClick={() => {
-                // Hier koppelen we later het bewerkformulier.
-              }}
+              onClick={() => onEdit?.(dienst)}
+                
+              
             />
           ))}
         </div>

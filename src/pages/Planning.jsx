@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 import PlanningForm from "../components/PlanningForm";
 import PlanningTable from "../components/planning/PlanningTable";
+import WeekPlanner from "../components/planning/WeekPlanner";
 import DagPlanner from "../components/planning/DagPlanner";
 
 export default function Planning() {
@@ -11,8 +12,26 @@ export default function Planning() {
   const [zoekterm, setZoekterm] = useState("");
   const [weergave, setWeergave] = useState("lijst");
 
+  const [isMobiel, setIsMobiel] = useState(
+    window.matchMedia("(max-width: 900px)").matches
+  );
+
   useEffect(() => {
     laadPlanning();
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 900px)");
+
+    const handleChange = (e) => {
+      setIsMobiel(e.matches);
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+    };
   }, []);
 
   async function laadPlanning() {
@@ -50,6 +69,11 @@ export default function Planning() {
       p.terminal?.toLowerCase().includes(zoekterm.toLowerCase())
   );
 
+  function openPlanning(planningItem) {
+    setGeselecteerdePlanning(planningItem);
+    setToonForm(true);
+  }
+
   return (
     <>
       <div className="table">
@@ -74,7 +98,13 @@ export default function Planning() {
           </button>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            marginBottom: "20px",
+          }}
+        >
           <button
             className="new-btn"
             onClick={() => setWeergave("lijst")}
@@ -86,7 +116,7 @@ export default function Planning() {
             className="new-btn"
             onClick={() => setWeergave("week")}
           >
-            📅 Weekplanner
+            📅 Planner
           </button>
         </div>
 
@@ -104,18 +134,24 @@ export default function Planning() {
 
             <PlanningTable
               planning={gefilterdePlanning}
-              onEdit={(planning) => {
-                setGeselecteerdePlanning(planning);
-                setToonForm(true);
-              }}
+              onEdit={openPlanning}
               onDelete={verwijderPlanning}
             />
           </>
         )}
 
-        {weergave === "week" && (
-  <DagPlanner planning={planning} />
-)}
+        {weergave === "week" &&
+          (isMobiel ? (
+            <DagPlanner
+              planning={planning}
+              onEdit={openPlanning}
+            />
+          ) : (
+            <WeekPlanner
+              planning={planning}
+              onEdit={openPlanning}
+            />
+          ))}
       </div>
 
       {toonForm && (
