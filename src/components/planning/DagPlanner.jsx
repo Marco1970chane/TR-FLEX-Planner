@@ -16,9 +16,20 @@ export default function DagPlanner({ planning = [] }) {
 
       <h3>{datum.toLocaleDateString("nl-NL")}</h3>
 
-      <p>
-        Vandaag zijn er <strong>{diensten.length}</strong> dienst(en).
-      </p>
+      <p>Totaal aantal diensten: {planning.length}</p>
+
+<pre
+  style={{
+    background: "#f5f5f5",
+    padding: "10px",
+    overflow: "auto",
+    fontSize: "12px",
+  }}
+>
+  {JSON.stringify(planning.slice(0, 5), null, 2)}
+</pre>
+        
+      
     </div>
   );
 }
