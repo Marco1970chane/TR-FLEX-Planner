@@ -27,6 +27,10 @@ export default function DashboardCharts({
   weekData,
   terminalData,
 }) {
+  console.log("DashboardCharts");
+  console.log(weekData);
+  console.log(terminalData);
+
   return (
     <div
       style={{
