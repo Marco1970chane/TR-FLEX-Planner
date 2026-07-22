@@ -20,7 +20,7 @@ export default function PlanningCard({ dienst, onClick }) {
       className={`dienst-card ${terminalClass(dienst.terminal)}`}
       onClick={(e) => {
         e.stopPropagation();
-        onClick();
+        onClick(e);
       }}
     >
       <div className="dienst-header">

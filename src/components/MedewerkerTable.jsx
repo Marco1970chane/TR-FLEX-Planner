@@ -1,4 +1,8 @@
-export default function MedewerkerTable({ medewerkers }) {
+export default function MedewerkerTable({
+  medewerkers,
+  onEdit,
+  onDelete,
+}) {
   return (
     <table>
       <thead>
@@ -20,7 +24,12 @@ export default function MedewerkerTable({ medewerkers }) {
             <td>{m.status}</td>
 
             <td>
-              <button className="new-btn">✏️</button>
+              <button
+                className="new-btn"
+                onClick={() => onEdit(m)}
+              >
+                ✏️
+              </button>
 
               <button
                 className="new-btn"
@@ -28,6 +37,7 @@ export default function MedewerkerTable({ medewerkers }) {
                   marginLeft: "10px",
                   background: "#d9534f",
                 }}
+                onClick={() => onDelete(m.id)}
               >
                 🗑️
               </button>

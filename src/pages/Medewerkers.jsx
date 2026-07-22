@@ -8,6 +8,11 @@ export default function Medewerkers() {
   const [medewerkers, setMedewerkers] = useState([]);
   const [toonForm, setToonForm] = useState(false);
   const [zoekterm, setZoekterm] = useState("");
+  const [geselecteerdeMedewerker, setGeselecteerdeMedewerker] = useState(null);
+
+  useEffect(() => {
+    laadMedewerkers();
+  }, []);
 
   async function laadMedewerkers() {
     const { data, error } = await supabase
@@ -15,14 +20,39 @@ export default function Medewerkers() {
       .select("*")
       .order("naam");
 
-    if (!error) {
-      setMedewerkers(data);
+    if (error) {
+      alert(error.message);
+      return;
     }
+
+    setMedewerkers(data);
   }
 
-  useEffect(() => {
+  async function verwijderMedewerker(id) {
+    if (
+      !window.confirm(
+        "Weet je zeker dat je deze medewerker wilt verwijderen?"
+      )
+    ) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("medewerkers")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
     laadMedewerkers();
-  }, []);
+  }
+
+  const gefilterdeMedewerkers = medewerkers.filter((m) =>
+    m.naam?.toLowerCase().includes(zoekterm.toLowerCase())
+  );
 
   return (
     <>
@@ -39,93 +69,51 @@ export default function Medewerkers() {
 
           <button
             className="new-btn"
-            onClick={() => setToonForm(true)}
+            onClick={() => {
+              setGeselecteerdeMedewerker(null);
+              setToonForm(true);
+            }}
           >
             + Nieuwe medewerker
           </button>
         </div>
 
         <SearchBar
-  value={zoekterm}
-  onChange={setZoekterm}
-/>
-          
-            
-            
-            
-          
-            
-              
-              
-              
-              
-              
-            
-          
-        
+          value={zoekterm}
+          onChange={setZoekterm}
+        />
 
-   <MedewerkerTable
-  medewerkers={medewerkers.filter((m) =>
-    m.naam.toLowerCase().includes(zoekterm.toLowerCase())
-  )}
-/>     
-  
-  
+        <br />
 
-          
-            
-              
-              
-              
-              
-            
-            
-          
-
-          
-          
-              
-                
-              
-              
-                
-                  
-                  
-                  
-                  
-
-                  
-                    
-
-                    
-                      
-                      
-                        
-                        
-                      
-                    
-                      
-                    
-                  
-                
-              
-          
-        
+        <MedewerkerTable
+          medewerkers={gefilterdeMedewerkers}
+          onEdit={(medewerker) => {
+            setGeselecteerdeMedewerker(medewerker);
+            setToonForm(true);
+          }}
+          onDelete={verwijderMedewerker}
+        />
       </div>
 
       {toonForm && (
         <div className="modal">
           <div className="modal-content">
             <MedewerkerForm
+              medewerker={geselecteerdeMedewerker}
               onSaved={() => {
                 laadMedewerkers();
                 setToonForm(false);
+                setGeselecteerdeMedewerker(null);
               }}
             />
 
             <button
               className="new-btn"
-              onClick={() => setToonForm(false)}
+              style={{ marginTop: "15px" }}
+              onClick={() => {
+                setToonForm(false);
+                setGeselecteerdeMedewerker(null);
+              }}
             >
               Sluiten
             </button>
