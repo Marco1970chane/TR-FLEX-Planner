@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSwipeable } from "react-swipeable";
+import { supabase } from "../../services/supabase";
 import PlanningCard from "./PlanningCard";
 import "./DagPlanner.css";
 
@@ -17,13 +18,11 @@ export default function DagPlanner({
 
     const vandaagString = vandaag.toISOString().split("T")[0];
 
-    // Is er planning vandaag?
     if (planning.some((p) => p.datum === vandaagString)) {
       setDatum(vandaag);
       return;
     }
 
-    // Zoek eerstvolgende datum met planning
     const uniekeDatums = [...new Set(planning.map((p) => p.datum))].sort();
 
     const volgende =
@@ -48,6 +47,45 @@ export default function DagPlanner({
 
   function vandaag() {
     setDatum(new Date());
+  }
+
+  async function verstuurWhatsApp(dienst) {
+    if (!dienst.medewerker) {
+      alert("Geen medewerker gekoppeld aan deze dienst.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("medewerkers")
+      .select("telefoon")
+      .eq("naam", dienst.medewerker)
+      .single();
+
+    if (error || !data?.telefoon) {
+      alert("Geen telefoonnummer gevonden voor deze medewerker.");
+      return;
+    }
+
+    const bericht = `Hallo ${dienst.medewerker},
+
+Er is een dienst beschikbaar.
+
+📅 Datum: ${dienst.datum}
+🏭 Terminal: ${dienst.terminal}
+🕒 Tijd: ${dienst.starttijd || "--:--"} - ${dienst.eindtijd || "--:--"}
+
+Kun jij deze dienst werken?
+
+Reageer met JA als je beschikbaar bent.
+
+Groet,
+TR-FLEX Planner`;
+
+    const url = `https://wa.me/${data.telefoon}?text=${encodeURIComponent(
+      bericht
+    )}`;
+
+    window.open(url, "_blank");
   }
 
   const handlers = useSwipeable({
@@ -78,11 +116,7 @@ export default function DagPlanner({
         }}
       >
         <button onClick={vorigeDag}>⬅️</button>
-
-        <button onClick={vandaag}>
-          Vandaag
-        </button>
-
+        <button onClick={vandaag}>Vandaag</button>
         <button onClick={volgendeDag}>➡️</button>
       </div>
 
@@ -123,6 +157,7 @@ export default function DagPlanner({
               key={dienst.id}
               dienst={dienst}
               onClick={() => onEdit?.(dienst)}
+              onWhatsApp={verstuurWhatsApp}
             />
           ))}
         </div>

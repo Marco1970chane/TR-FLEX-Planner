@@ -9,6 +9,7 @@ import Planning from "./pages/Planning";
 import Medewerkers from "./pages/Medewerkers";
 import Terminals from "./pages/Terminals";
 import Rapportages from "./pages/Rapportages";
+import Urenregistratie from "./pages/Urenregistratie";
 
 function App() {
   return (
@@ -19,12 +20,13 @@ function App() {
         <Header />
 
         <Routes>
-  <Route path="/" element={<Dashboard />} />
-  <Route path="/planning" element={<Planning />} />
-  <Route path="/medewerkers" element={<Medewerkers />} />
-  <Route path="/terminals" element={<Terminals />} />
-  <Route path="/rapportages" element={<Rapportages />} />
-</Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/planning" element={<Planning />} />
+          <Route path="/medewerkers" element={<Medewerkers />} />
+          <Route path="/terminals" element={<Terminals />} />
+          <Route path="/urenregistratie" element={<Urenregistratie />} />
+          <Route path="/rapportages" element={<Rapportages />} />
+        </Routes>
       </div>
     </div>
   );

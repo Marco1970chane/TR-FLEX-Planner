@@ -14,13 +14,17 @@ function terminalClass(terminal = "") {
   return "";
 }
 
-export default function PlanningCard({ dienst, onClick }) {
+export default function PlanningCard({
+  dienst,
+  onClick,
+  onWhatsApp,
+}) {
   return (
     <div
       className={`dienst-card ${terminalClass(dienst.terminal)}`}
       onClick={(e) => {
         e.stopPropagation();
-        onClick(e);
+        onClick?.(e);
       }}
     >
       <div className="dienst-header">
@@ -31,6 +35,10 @@ export default function PlanningCard({ dienst, onClick }) {
             {dienst.status}
           </span>
         )}
+      </div>
+
+      <div style={{ marginTop: 8 }}>
+        👤 <strong>{dienst.medewerker}</strong>
       </div>
 
       {(dienst.starttijd || dienst.eindtijd) && (
@@ -44,6 +52,20 @@ export default function PlanningCard({ dienst, onClick }) {
           {dienst.opmerking}
         </div>
       )}
+
+      <button
+        className="new-btn"
+        style={{
+          marginTop: 12,
+          width: "100%",
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onWhatsApp?.(dienst);
+        }}
+      >
+        📱 Verstuur via WhatsApp
+      </button>
     </div>
   );
 }

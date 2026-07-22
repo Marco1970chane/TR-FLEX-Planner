@@ -22,6 +22,10 @@ export default function Sidebar() {
           🏭 Terminals
         </NavLink>
 
+        <NavLink to="/urenregistratie" className="menu-item">
+          ⏱️ Urenregistratie
+        </NavLink>
+
         <NavLink to="/rapportages" className="menu-item">
           📈 Rapportages
         </NavLink>

@@ -11,6 +11,7 @@ export default function PlanningForm({
   const [dienst, setDienst] = useState("");
   const [terminal, setTerminal] = useState("");
   const [medewerker, setMedewerker] = useState("");
+  const [openDienst, setOpenDienst] = useState(false);
 
   const [medewerkers, setMedewerkers] = useState([]);
   const [terminals, setTerminals] = useState([]);
@@ -19,25 +20,23 @@ export default function PlanningForm({
     laadMedewerkers();
     laadTerminals();
   }, []);
-useEffect(() => {
-  if (!planning?.id) {
-    setDatum(defaultDatum || "");
-    setMedewerker(defaultMedewerker || "");
-  }
-}, [defaultDatum, defaultMedewerker, planning]);
-  
-    
-    
-  
 
-useEffect(() => {
-  if (planning?.id) {
-    setDatum(planning.datum || "");
-    setDienst(planning.dienst || "");
-    setTerminal(planning.terminal || "");
-    setMedewerker(planning.medewerker || "");
-  }
-}, [planning]);
+  useEffect(() => {
+    if (!planning?.id) {
+      setDatum(defaultDatum || "");
+      setMedewerker(defaultMedewerker || "");
+    }
+  }, [defaultDatum, defaultMedewerker, planning]);
+
+  useEffect(() => {
+    if (planning?.id) {
+      setDatum(planning.datum || "");
+      setDienst(planning.dienst || "");
+      setTerminal(planning.terminal || "");
+      setMedewerker(planning.medewerker || "");
+      setOpenDienst(planning.status === "Open");
+    }
+  }, [planning]);
 
   async function laadMedewerkers() {
     const { data, error } = await supabase
@@ -46,7 +45,7 @@ useEffect(() => {
       .order("naam");
 
     if (!error) {
-      setMedewerkers(data);
+      setMedewerkers(data || []);
     }
   }
 
@@ -57,39 +56,34 @@ useEffect(() => {
       .order("naam");
 
     if (!error) {
-      setTerminals(data);
+      setTerminals(data || []);
     }
   }
 
   async function opslaan(e) {
     e.preventDefault();
 
+    const gegevens = {
+      datum,
+      dienst,
+      terminal,
+      medewerker: openDienst ? null : medewerker,
+      status: openDienst ? "Open" : "Ingepland",
+    };
+
     let error;
 
-    if (planning?.id != null) {
+    if (planning?.id) {
       const result = await supabase
         .from("planning")
-        .update({
-          datum,
-          dienst,
-          terminal,
-          medewerker,
-        })
+        .update(gegevens)
         .eq("id", planning.id);
 
       error = result.error;
     } else {
       const result = await supabase
         .from("planning")
-        .insert([
-          {
-            datum,
-            dienst,
-            terminal,
-            medewerker,
-            status: "Ingepland",
-          },
-        ]);
+        .insert([gegevens]);
 
       error = result.error;
     }
@@ -109,20 +103,17 @@ useEffect(() => {
     setDienst("");
     setTerminal("");
     setMedewerker("");
+    setOpenDienst(false);
 
-    if (onSaved) {
-      onSaved();
-    }
+    onSaved?.();
   }
 
   return (
     <form onSubmit={opslaan}>
       <h2>
         {planning?.id
-  ? "✏️ Dienst bewerken"
-  : "📅 Nieuwe dienst"}
-          
-          
+          ? "✏️ Dienst bewerken"
+          : "📅 Nieuwe dienst"}
       </h2>
 
       <label>Datum</label>
@@ -142,21 +133,11 @@ useEffect(() => {
         required
       >
         <option value="">Kies een dienst...</option>
-        <option value="06:00-14:00">
-          06:00-14:00
-        </option>
-        <option value="07:00-15:00">
-          07:00-15:00
-        </option>
-        <option value="10:00-18:00">
-          10:00-18:00
-        </option>
-        <option value="14:00-22:00">
-          14:00-22:00
-        </option>
-        <option value="22:00-06:00">
-          22:00-06:00
-        </option>
+        <option value="06:00-14:00">06:00-14:00</option>
+        <option value="07:00-15:00">07:00-15:00</option>
+        <option value="10:00-18:00">10:00-18:00</option>
+        <option value="14:00-22:00">14:00-22:00</option>
+        <option value="22:00-06:00">22:00-06:00</option>
       </select>
 
       <label>Terminal</label>
@@ -166,38 +147,54 @@ useEffect(() => {
         onChange={(e) => setTerminal(e.target.value)}
         required
       >
-        <option value="">
-          Kies terminal...
-        </option>
+        <option value="">Kies terminal...</option>
 
         {terminals.map((t) => (
-          <option
-            key={t.id}
-            value={t.naam}
-          >
+          <option key={t.id} value={t.naam}>
             {t.naam}
           </option>
         ))}
       </select>
 
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          margin: "15px 0",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={openDienst}
+          onChange={(e) => {
+            setOpenDienst(e.target.checked);
+
+            if (e.target.checked) {
+              setMedewerker("");
+            }
+          }}
+        />
+
+        📢 Open dienst (nog geen medewerker)
+      </label>
+
       <label>Medewerker</label>
 
       <select
         value={medewerker}
-        onChange={(e) =>
-          setMedewerker(e.target.value)
-        }
-        required
+        disabled={openDienst}
+        required={!openDienst}
+        onChange={(e) => setMedewerker(e.target.value)}
       >
         <option value="">
-          Kies medewerker...
+          {openDienst
+            ? "Open dienst"
+            : "Kies medewerker..."}
         </option>
 
         {medewerkers.map((m) => (
-          <option
-            key={m.id}
-            value={m.naam}
-          >
+          <option key={m.id} value={m.naam}>
             {m.naam}
           </option>
         ))}
