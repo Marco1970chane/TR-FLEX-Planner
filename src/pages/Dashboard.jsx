@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 import StatsCard from "../components/StatsCard";
+import DashboardCharts from "../components/DashboardCharts";
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -11,18 +12,18 @@ export default function Dashboard() {
   });
 
   const [planningVandaag, setPlanningVandaag] = useState([]);
+  const [weekData, setWeekData] = useState([]);
+  const [terminalData, setTerminalData] = useState([]);
 
   useEffect(() => {
     laadDashboard();
   }, []);
 
   async function laadDashboard() {
-    // Medewerkers ophalen
     const { data: medewerkers } = await supabase
       .from("medewerkers")
       .select("*");
 
-    // Planning ophalen
     const { data: planning } = await supabase
       .from("planning")
       .select("*");
@@ -54,6 +55,42 @@ export default function Dashboard() {
     });
 
     setPlanningVandaag(dienstenVandaag);
+
+    const dagTelling = {};
+
+    planning?.forEach((p) => {
+      if (!p.datum) return;
+
+      dagTelling[p.datum] =
+        (dagTelling[p.datum] || 0) + 1;
+    });
+
+    const weekGrafiek = Object.entries(dagTelling)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([dag, diensten]) => ({
+        dag,
+        diensten,
+      }));
+
+    setWeekData(weekGrafiek);
+
+    const terminalTelling = {};
+
+    planning?.forEach((p) => {
+      if (!p.terminal) return;
+
+      terminalTelling[p.terminal] =
+        (terminalTelling[p.terminal] || 0) + 1;
+    });
+
+    const terminalGrafiek = Object.entries(
+      terminalTelling
+    ).map(([terminal, waarde]) => ({
+      terminal,
+      waarde,
+    }));
+
+    setTerminalData(terminalGrafiek);
   }
 
   return (
@@ -111,6 +148,11 @@ export default function Dashboard() {
           </table>
         )}
       </div>
+
+      <DashboardCharts
+        weekData={weekData}
+        terminalData={terminalData}
+      />
     </>
   );
 }
