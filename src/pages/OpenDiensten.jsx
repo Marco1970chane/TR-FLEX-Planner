@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
-import AanbiedModal from "../components/AanbiedModal";
+import OpenDienstCard from "../components/opendiensten/OpenDienstCard";
+import AanbiedModal from "../components/opendiensten/AanbiedModal";
 
 export default function OpenDiensten() {
   const [diensten, setDiensten] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [geselecteerdeDienst, setGeselecteerdeDienst] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     laadOpenDiensten();
@@ -30,7 +32,7 @@ export default function OpenDiensten() {
     setLoading(false);
   }
 
-  function openModal(dienst) {
+  function aanbieden(dienst) {
     setGeselecteerdeDienst(dienst);
     setModalOpen(true);
   }
@@ -40,46 +42,27 @@ export default function OpenDiensten() {
     setGeselecteerdeDienst(null);
   }
 
+  if (loading) {
+    return <p>Open diensten laden...</p>;
+  }
+
   return (
     <>
       <div className="table">
         <h2>📢 Open Diensten</h2>
 
-        {loading ? (
-          <p>Open diensten laden...</p>
-        ) : diensten.length === 0 ? (
-          <p>Er zijn momenteel geen open diensten.</p>
+        {diensten.length === 0 ? (
+          <p>Er zijn geen open diensten.</p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Datum</th>
-                <th>Dienst</th>
-                <th>Terminal</th>
-                <th>Status</th>
-                <th>Actie</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {diensten.map((dienst) => (
-                <tr key={dienst.id}>
-                  <td>{dienst.datum}</td>
-                  <td>{dienst.dienst}</td>
-                  <td>{dienst.terminal}</td>
-                  <td>{dienst.status}</td>
-                  <td>
-                    <button
-                      className="new-btn"
-                      onClick={() => openModal(dienst)}
-                    >
-                      📱 Aanbieden
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="open-diensten-grid">
+            {diensten.map((dienst) => (
+              <OpenDienstCard
+                key={dienst.id}
+                dienst={dienst}
+                onAanbieden={aanbieden}
+              />
+            ))}
+          </div>
         )}
       </div>
 
