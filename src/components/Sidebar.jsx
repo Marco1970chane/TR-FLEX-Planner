@@ -14,6 +14,10 @@ export default function Sidebar() {
           📅 Planning
         </NavLink>
 
+        <NavLink to="/opendiensten" className="menu-item">
+          📢 Open Diensten
+        </NavLink>
+
         <NavLink to="/medewerkers" className="menu-item">
           👷 Medewerkers
         </NavLink>

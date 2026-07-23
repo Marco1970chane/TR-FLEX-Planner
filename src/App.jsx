@@ -10,6 +10,7 @@ import Medewerkers from "./pages/Medewerkers";
 import Terminals from "./pages/Terminals";
 import Rapportages from "./pages/Rapportages";
 import Urenregistratie from "./pages/Urenregistratie";
+import OpenDiensten from "./pages/OpenDiensten";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/medewerkers" element={<Medewerkers />} />
           <Route path="/terminals" element={<Terminals />} />
           <Route path="/urenregistratie" element={<Urenregistratie />} />
+          <Route path="/opendiensten" element={<OpenDiensten />} />
           <Route path="/rapportages" element={<Rapportages />} />
         </Routes>
       </div>
