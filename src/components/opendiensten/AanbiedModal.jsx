@@ -59,9 +59,10 @@ export default function AanbiedModal({
       status: "Verzonden",
     }));
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("dienst_aanbiedingen")
-      .insert(records);
+      .insert(records)
+      .select();
 
     setLoading(false);
 
@@ -71,9 +72,106 @@ export default function AanbiedModal({
       return;
     }
 
-    alert(`${records.length} medewerker(s) toegevoegd.`);
-
     onVerzonden?.();
+
+    const links = data.map((aanbieding) => {
+      const medewerker = geselecteerdeMedewerkers.find(
+        (m) => m.naam === aanbieding.medewerker
+      );
+
+      if (!medewerker?.telefoon) return null;
+
+      const bericht = encodeURIComponent(
+`Hallo ${aanbieding.medewerker},
+
+Er staat een open dienst voor je klaar.
+
+📅 Datum: ${dienst.datum}
+🕒 Dienst: ${dienst.dienst}
+📍 Terminal: ${dienst.terminal}
+
+Accepteren of weigeren?
+
+Klik op onderstaande link:
+
+https://tr-flex-planner.vercel.app/reageren/${aanbieding.token}`
+      );
+
+      return {
+        naam: aanbieding.medewerker,
+        telefoon: medewerker.telefoon,
+        url: `https://wa.me/${medewerker.telefoon}?text=${bericht}`,
+      };
+    }).filter(Boolean);
+
+    const popup = window.open("", "_blank");
+
+    if (popup) {
+      popup.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>WhatsApp berichten</title>
+          <style>
+            body{
+              font-family:Arial,sans-serif;
+              padding:30px;
+              background:#f5f5f5;
+            }
+
+            h2{
+              margin-bottom:25px;
+            }
+
+            .persoon{
+              background:white;
+              padding:15px;
+              margin-bottom:15px;
+              border-radius:8px;
+              box-shadow:0 2px 6px rgba(0,0,0,.1);
+            }
+
+            a{
+              display:inline-block;
+              margin-top:10px;
+              padding:10px 16px;
+              background:#25D366;
+              color:white;
+              text-decoration:none;
+              border-radius:6px;
+              font-weight:bold;
+            }
+
+            a:hover{
+              background:#1faa52;
+            }
+          </style>
+        </head>
+
+        <body>
+
+          <h2>📱 WhatsApp berichten</h2>
+
+          ${links
+            .map(
+              (l) => `
+                <div class="persoon">
+                  <strong>${l.naam}</strong><br>
+                  <a href="${l.url}" target="_blank">
+                    📱 Open WhatsApp
+                  </a>
+                </div>
+              `
+            )
+            .join("")}
+
+        </body>
+        </html>
+      `);
+
+      popup.document.close();
+    }
+
     onClose();
   }
 
@@ -110,7 +208,10 @@ export default function AanbiedModal({
                 onChange={() => toggle(m.id)}
               />
 
-              <span>{m.naam}</span>
+              <span>
+                {m.naam}
+                {!m.telefoon && " ⚠️ (geen telefoonnummer)"}
+              </span>
             </label>
           ))}
         </div>
@@ -129,7 +230,7 @@ export default function AanbiedModal({
             disabled={loading}
             onClick={versturen}
           >
-            {loading ? "Opslaan..." : "Versturen"}
+            {loading ? "Versturen..." : "Versturen"}
           </button>
         </div>
       </div>

@@ -5,8 +5,17 @@ export default function PlanningTable({
   onEdit,
   onDelete,
 }) {
+  if (!planning.length) {
+    return (
+      <div className="table-empty">
+        <h3>📅 Geen planning gevonden</h3>
+        <p>Er zijn geen diensten die aan de huidige filters voldoen.</p>
+      </div>
+    );
+  }
+
   return (
-    <table>
+    <table className="planning-table">
       <thead>
         <tr>
           <th>Datum</th>
@@ -14,7 +23,7 @@ export default function PlanningTable({
           <th>Dienst</th>
           <th>Operator</th>
           <th>Status</th>
-          <th>Acties</th>
+          <th style={{ width: "180px" }}>Acties</th>
         </tr>
       </thead>
 

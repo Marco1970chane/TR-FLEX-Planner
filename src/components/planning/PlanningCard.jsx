@@ -10,8 +10,25 @@ function terminalClass(terminal = "") {
   if (t.includes("exolum")) return "exolum";
   if (t.includes("aglobis")) return "aglobis";
   if (t.includes("tepsa")) return "tepsa";
+  if (t.includes("shell")) return "shell";
+  if (t.includes("met")) return "met";
 
-  return "";
+  return "default-terminal";
+}
+
+function statusClass(status = "") {
+  switch (status.toLowerCase()) {
+    case "ingepland":
+      return "status-ing";
+    case "open":
+      return "status-open";
+    case "training":
+      return "status-training";
+    case "ziek":
+      return "status-ziek";
+    default:
+      return "status-default";
+  }
 }
 
 export default function PlanningCard({
@@ -21,51 +38,59 @@ export default function PlanningCard({
 }) {
   return (
     <div
-      className={`dienst-card ${terminalClass(dienst.terminal)}`}
+      className={`dienst-card ${terminalClass(
+        dienst.terminal
+      )}`}
       onClick={(e) => {
         e.stopPropagation();
-        onClick?.(e);
+        onClick?.(dienst);
       }}
     >
       <div className="dienst-header">
-        <strong>{dienst.terminal || "Geen terminal"}</strong>
+        <strong>{dienst.terminal}</strong>
 
         {dienst.status && (
-          <span className="dienst-status">
+          <span
+            className={`dienst-status ${statusClass(
+              dienst.status
+            )}`}
+          >
             {dienst.status}
           </span>
         )}
       </div>
 
-      <div style={{ marginTop: 8 }}>
-        👤 <strong>{dienst.medewerker}</strong>
+      <div className="dienst-medewerker">
+        👤{" "}
+        <strong>
+          {dienst.medewerker || "OPEN DIENST"}
+        </strong>
       </div>
 
       {(dienst.starttijd || dienst.eindtijd) && (
         <div className="dienst-tijd">
-          🕒 {dienst.starttijd || "--:--"} - {dienst.eindtijd || "--:--"}
+          🕒 {dienst.starttijd || "--:--"} -{" "}
+          {dienst.eindtijd || "--:--"}
         </div>
       )}
 
       {dienst.opmerking && (
         <div className="dienst-opmerking">
-          {dienst.opmerking}
+          💬 {dienst.opmerking}
         </div>
       )}
 
-      <button
-        className="new-btn"
-        style={{
-          marginTop: 12,
-          width: "100%",
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          onWhatsApp?.(dienst);
-        }}
-      >
-        📱 Verstuur via WhatsApp
-      </button>
+      {dienst.status?.toLowerCase() === "open" && (
+        <button
+          className="whatsapp-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onWhatsApp?.(dienst);
+          }}
+        >
+          📱 Dienst aanbieden
+        </button>
+      )}
     </div>
   );
 }

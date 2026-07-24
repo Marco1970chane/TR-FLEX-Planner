@@ -1,8 +1,7 @@
 import "./App.css";
 import { Routes, Route } from "react-router-dom";
 
-import Header from "./components/Header";
-import Sidebar from "./components/Sidebar";
+import Layout from "./layout/Layout";
 
 import Dashboard from "./pages/Dashboard";
 import Planning from "./pages/Planning";
@@ -11,27 +10,22 @@ import Terminals from "./pages/Terminals";
 import Rapportages from "./pages/Rapportages";
 import Urenregistratie from "./pages/Urenregistratie";
 import OpenDiensten from "./pages/OpenDiensten";
+import Reageren from "./pages/ReagerenPagina";
 
-function App() {
+export default function App() {
   return (
-    <div className="layout">
-      <Sidebar />
+    <Routes>
+      <Route path="/reageren/:token" element={<Reageren />} />
 
-      <div className="content">
-        <Header />
-
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/planning" element={<Planning />} />
-          <Route path="/medewerkers" element={<Medewerkers />} />
-          <Route path="/terminals" element={<Terminals />} />
-          <Route path="/urenregistratie" element={<Urenregistratie />} />
-          <Route path="/opendiensten" element={<OpenDiensten />} />
-          <Route path="/rapportages" element={<Rapportages />} />
-        </Routes>
-      </div>
-    </div>
+      <Route element={<Layout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/planning" element={<Planning />} />
+        <Route path="/medewerkers" element={<Medewerkers />} />
+        <Route path="/terminals" element={<Terminals />} />
+        <Route path="/urenregistratie" element={<Urenregistratie />} />
+        <Route path="/opendiensten" element={<OpenDiensten />} />
+        <Route path="/rapportages" element={<Rapportages />} />
+      </Route>
+    </Routes>
   );
 }
-
-export default App;

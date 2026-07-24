@@ -5,40 +5,61 @@ export default function PlanningRow({
   onEdit,
   onDelete,
 }) {
+  const datum = new Date(planning.datum).toLocaleDateString("nl-NL", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
   return (
     <tr>
       <td>
-        {new Date(planning.datum).toLocaleDateString("nl-NL")}
+        <strong>{datum}</strong>
       </td>
 
-      <td>{planning.terminal}</td>
+      <td>
+        <span className="terminal-badge">
+          🏭 {planning.terminal}
+        </span>
+      </td>
 
-      <td>{planning.dienst}</td>
+      <td>
+        <strong>{planning.dienst}</strong>
+      </td>
 
-      <td>{planning.medewerker || "OPEN"}</td>
+      <td>
+        {planning.medewerker ? (
+          planning.medewerker
+        ) : (
+          <span className="open-dienst">
+            🟠 OPEN DIENST
+          </span>
+        )}
+      </td>
 
       <td>
         <StatusBadge status={planning.status} />
       </td>
 
       <td>
-        <button
-          className="new-btn"
-          onClick={() => onEdit(planning)}
-        >
-          ✏️
-        </button>
+        <div className="actie-buttons">
+          <button
+            className="edit-btn"
+            onClick={() => onEdit(planning)}
+            title="Bewerken"
+          >
+            ✏️
+          </button>
 
-        <button
-          className="new-btn"
-          style={{
-            marginLeft: "10px",
-            background: "#dc3545",
-          }}
-          onClick={() => onDelete(planning.id)}
-        >
-          🗑️
-        </button>
+          <button
+            className="delete-btn"
+            onClick={() => onDelete(planning.id)}
+            title="Verwijderen"
+          >
+            🗑️
+          </button>
+        </div>
       </td>
     </tr>
   );

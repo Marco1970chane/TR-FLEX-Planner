@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabase";
 import MedewerkerForm from "../components/MedewerkerForm";
 import SearchBar from "../components/SearchBar";
@@ -9,23 +9,28 @@ export default function Medewerkers() {
   const [toonForm, setToonForm] = useState(false);
   const [zoekterm, setZoekterm] = useState("");
   const [geselecteerdeMedewerker, setGeselecteerdeMedewerker] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     laadMedewerkers();
   }, []);
 
   async function laadMedewerkers() {
+    setLoading(true);
+
     const { data, error } = await supabase
       .from("medewerkers")
       .select("*")
       .order("naam");
+
+    setLoading(false);
 
     if (error) {
       alert(error.message);
       return;
     }
 
-    setMedewerkers(data);
+    setMedewerkers(data || []);
   }
 
   async function verwijderMedewerker(id) {
@@ -50,22 +55,24 @@ export default function Medewerkers() {
     laadMedewerkers();
   }
 
-  const gefilterdeMedewerkers = medewerkers.filter((m) =>
-    m.naam?.toLowerCase().includes(zoekterm.toLowerCase())
-  );
+  const gefilterdeMedewerkers = useMemo(() => {
+    return medewerkers.filter((m) =>
+      m.naam?.toLowerCase().includes(zoekterm.toLowerCase())
+    );
+  }, [medewerkers, zoekterm]);
 
   return (
     <>
       <div className="table">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "20px",
-          }}
-        >
-          <h2>👷 Medewerkers</h2>
+
+        <div className="page-header">
+
+          <div>
+            <h2>👷 Medewerkers</h2>
+            <p>
+              {gefilterdeMedewerkers.length} van {medewerkers.length} medewerkers
+            </p>
+          </div>
 
           <button
             className="new-btn"
@@ -76,6 +83,21 @@ export default function Medewerkers() {
           >
             + Nieuwe medewerker
           </button>
+
+        </div>
+
+        <div className="stats-row">
+
+          <div className="stat-card">
+            <h3>{medewerkers.length}</h3>
+            <span>Totaal</span>
+          </div>
+
+          <div className="stat-card">
+            <h3>{gefilterdeMedewerkers.length}</h3>
+            <span>Resultaten</span>
+          </div>
+
         </div>
 
         <SearchBar
@@ -85,19 +107,27 @@ export default function Medewerkers() {
 
         <br />
 
-        <MedewerkerTable
-          medewerkers={gefilterdeMedewerkers}
-          onEdit={(medewerker) => {
-            setGeselecteerdeMedewerker(medewerker);
-            setToonForm(true);
-          }}
-          onDelete={verwijderMedewerker}
-        />
+        {loading ? (
+          <div style={{ padding: 30, textAlign: "center" }}>
+            Medewerkers laden...
+          </div>
+        ) : (
+          <MedewerkerTable
+            medewerkers={gefilterdeMedewerkers}
+            onEdit={(medewerker) => {
+              setGeselecteerdeMedewerker(medewerker);
+              setToonForm(true);
+            }}
+            onDelete={verwijderMedewerker}
+          />
+        )}
+
       </div>
 
       {toonForm && (
         <div className="modal">
           <div className="modal-content">
+
             <MedewerkerForm
               medewerker={geselecteerdeMedewerker}
               onSaved={() => {
@@ -109,7 +139,7 @@ export default function Medewerkers() {
 
             <button
               className="new-btn"
-              style={{ marginTop: "15px" }}
+              style={{ marginTop: 15 }}
               onClick={() => {
                 setToonForm(false);
                 setGeselecteerdeMedewerker(null);
@@ -117,6 +147,7 @@ export default function Medewerkers() {
             >
               Sluiten
             </button>
+
           </div>
         </div>
       )}

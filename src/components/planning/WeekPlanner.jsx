@@ -39,6 +39,8 @@ export default function WeekPlanner({
 }) {
   const [weekStart, setWeekStart] = useState(beginVanWeek());
 
+  const vandaagKey = formatDatum(new Date());
+
   const weekDagen = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const datum = new Date(weekStart);
@@ -94,9 +96,11 @@ export default function WeekPlanner({
 
   return (
     <div className="weekplanner">
+
       <div className="planner-header">
+
         <button className="new-btn" onClick={vorigeWeek}>
-          ◀
+          ◀ Vorige
         </button>
 
         <button className="new-btn" onClick={vandaag}>
@@ -104,12 +108,12 @@ export default function WeekPlanner({
         </button>
 
         <h3>
-          Week {weekNummer} ·{" "}
+          📅 Week {weekNummer} ·{" "}
           {weekDagen[0].datum.toLocaleDateString("nl-NL", {
             day: "numeric",
             month: "long",
-          })}{" "}
-          –{" "}
+          })}
+          {" - "}
           {weekDagen[6].datum.toLocaleDateString("nl-NL", {
             day: "numeric",
             month: "long",
@@ -117,17 +121,26 @@ export default function WeekPlanner({
         </h3>
 
         <button className="new-btn" onClick={volgendeWeek}>
-          ▶
+          Volgende ▶
         </button>
+
       </div>
 
       <div className="planner-grid">
+
         <div className="corner"></div>
 
         {weekDagen.map((dag) => (
-          <div key={dag.key} className="day-header">
+          <div
+            key={dag.key}
+            className={`day-header ${
+              dag.key === vandaagKey ? "today" : ""
+            }`}
+          >
             <strong>{dag.label}</strong>
+
             <br />
+
             {dag.datum.toLocaleDateString("nl-NL", {
               day: "2-digit",
               month: "2-digit",
@@ -135,44 +148,64 @@ export default function WeekPlanner({
           </div>
         ))}
 
-        {medewerkers.map((medewerker) => (
-          <Fragment key={medewerker}>
-            <div className="employee">{medewerker}</div>
+        {medewerkers.map((medewerker) => {
 
-            {weekDagen.map((dag) => {
-              const diensten =
-                planningMap[`${medewerker}-${dag.key}`] || [];
+          const totaal = planning.filter(
+            (p) => p.medewerker === medewerker
+          ).length;
 
-              return (
-                <div
-                  key={`${medewerker}-${dag.key}`}
-                  className="planner-cell"
-                  onClick={() => {
-                    if (diensten.length === 0) {
-                      onNieuweDienst(dag.key, medewerker);
-                    }
-                  }}
-                >
-                  {diensten.map((dienst) => (
-                    <PlanningCard
-  key={dienst.id}
-  dienst={dienst}
-  onClick={() => onEditDienst(dienst)}
-/>
-                      
-                      
-                      
-                        
-                        
-                      
-                    
-                  ))}
-                </div>
-              );
-            })}
-          </Fragment>
-        ))}
+          return (
+            <Fragment key={medewerker}>
+
+              <div className="employee">
+
+                <span>{medewerker}</span>
+
+                <span className="dienst-count">
+                  {totaal}
+                </span>
+
+              </div>
+
+              {weekDagen.map((dag) => {
+
+                const diensten =
+                  planningMap[
+                    `${medewerker}-${dag.key}`
+                  ] || [];
+
+                return (
+                  <div
+                    key={`${medewerker}-${dag.key}`}
+                    className="planner-cell"
+                    onClick={() => {
+                      if (diensten.length === 0) {
+                        onNieuweDienst?.(
+                          dag.key,
+                          medewerker
+                        );
+                      }
+                    }}
+                  >
+                    {diensten.map((dienst) => (
+                      <PlanningCard
+                        key={dienst.id}
+                        dienst={dienst}
+                        onClick={() =>
+                          onEditDienst?.(dienst)
+                        }
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+
+            </Fragment>
+          );
+        })}
+
       </div>
+
     </div>
   );
 }
