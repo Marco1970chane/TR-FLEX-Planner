@@ -9,8 +9,16 @@ export default function PlanningForm({
 }) {
   const [datum, setDatum] = useState("");
   const [dienst, setDienst] = useState("");
+
   const [terminal, setTerminal] = useState("");
+  const [terminalId, setTerminalId] = useState(null);
+
   const [medewerker, setMedewerker] = useState("");
+  const [medewerkerId, setMedewerkerId] = useState(null);
+
+  const [starttijd, setStarttijd] = useState("");
+  const [eindtijd, setEindtijd] = useState("");
+
   const [openDienst, setOpenDienst] = useState(false);
 
   const [medewerkers, setMedewerkers] = useState([]);
@@ -32,8 +40,16 @@ export default function PlanningForm({
     if (planning?.id) {
       setDatum(planning.datum || "");
       setDienst(planning.dienst || "");
+
       setTerminal(planning.terminal || "");
+      setTerminalId(planning.terminal_id || null);
+
       setMedewerker(planning.medewerker || "");
+      setMedewerkerId(planning.medewerker_id || null);
+
+      setStarttijd(planning.starttijd || "");
+      setEindtijd(planning.eindtijd || "");
+
       setOpenDienst(planning.status === "Open");
     }
   }, [planning]);
@@ -63,11 +79,25 @@ export default function PlanningForm({
   async function opslaan(e) {
     e.preventDefault();
 
+    const dienstTekst =
+      starttijd && eindtijd
+        ? `${starttijd}-${eindtijd}`
+        : dienst;
+
     const gegevens = {
       datum,
-      dienst,
+
+      dienst: dienstTekst,
+
       terminal,
+      terminal_id: terminalId,
+
       medewerker: openDienst ? null : medewerker,
+      medewerker_id: openDienst ? null : medewerkerId,
+
+      starttijd,
+      eindtijd,
+
       status: openDienst ? "Open" : "Ingepland",
     };
 
@@ -102,7 +132,11 @@ export default function PlanningForm({
     setDatum("");
     setDienst("");
     setTerminal("");
+    setTerminalId(null);
     setMedewerker("");
+    setMedewerkerId(null);
+    setStarttijd("");
+    setEindtijd("");
     setOpenDienst(false);
 
     onSaved?.();
@@ -130,9 +164,8 @@ export default function PlanningForm({
       <select
         value={dienst}
         onChange={(e) => setDienst(e.target.value)}
-        required
       >
-        <option value="">Kies een dienst...</option>
+        <option value="">Kies een standaarddienst...</option>
         <option value="06:00-14:00">06:00-14:00</option>
         <option value="07:00-15:00">07:00-15:00</option>
         <option value="10:00-18:00">10:00-18:00</option>
@@ -140,11 +173,34 @@ export default function PlanningForm({
         <option value="22:00-06:00">22:00-06:00</option>
       </select>
 
+      <label>Starttijd</label>
+
+      <input
+        type="time"
+        value={starttijd}
+        onChange={(e) => setStarttijd(e.target.value)}
+      />
+
+      <label>Eindtijd</label>
+
+      <input
+        type="time"
+        value={eindtijd}
+        onChange={(e) => setEindtijd(e.target.value)}
+      />
+
       <label>Terminal</label>
 
       <select
         value={terminal}
-        onChange={(e) => setTerminal(e.target.value)}
+        onChange={(e) => {
+          const gekozen = terminals.find(
+            (t) => t.naam === e.target.value
+          );
+
+          setTerminal(e.target.value);
+          setTerminalId(gekozen?.id ?? null);
+        }}
         required
       >
         <option value="">Kies terminal...</option>
@@ -172,6 +228,7 @@ export default function PlanningForm({
 
             if (e.target.checked) {
               setMedewerker("");
+              setMedewerkerId(null);
             }
           }}
         />
@@ -185,7 +242,14 @@ export default function PlanningForm({
         value={medewerker}
         disabled={openDienst}
         required={!openDienst}
-        onChange={(e) => setMedewerker(e.target.value)}
+        onChange={(e) => {
+          const gekozen = medewerkers.find(
+            (m) => m.naam === e.target.value
+          );
+
+          setMedewerker(e.target.value);
+          setMedewerkerId(gekozen?.id ?? null);
+        }}
       >
         <option value="">
           {openDienst

@@ -1,3 +1,4 @@
+import PlanningStats from "../components/planning/PlanningStats";
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 import PlanningForm from "../components/PlanningForm";
@@ -63,11 +64,19 @@ export default function Planning() {
     laadPlanning();
   }
 
-  const gefilterdePlanning = planning.filter(
-    (p) =>
-      p.medewerker?.toLowerCase().includes(zoekterm.toLowerCase()) ||
-      p.terminal?.toLowerCase().includes(zoekterm.toLowerCase())
+  const gefilterdePlanning = planning.filter((p) => {
+  const zoek = zoekterm.toLowerCase();
+
+  return (
+    (p.medewerker || "Open dienst").toLowerCase().includes(zoek) ||
+    (p.terminal || "").toLowerCase().includes(zoek) ||
+    (p.status || "").toLowerCase().includes(zoek)
   );
+});
+    
+      
+      
+  
 
   function openPlanning(planningItem) {
     setGeselecteerdePlanning(planningItem);
@@ -95,8 +104,10 @@ export default function Planning() {
             }}
           >
             + Nieuwe dienst
+            
           </button>
         </div>
+        <PlanningStats planning={planning} />
 
         <div
           style={{

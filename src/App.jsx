@@ -1,4 +1,5 @@
 import "./App.css";
+
 import { Routes, Route } from "react-router-dom";
 
 import Layout from "./layout/Layout";
@@ -11,6 +12,7 @@ import Rapportages from "./pages/Rapportages";
 import Urenregistratie from "./pages/Urenregistratie";
 import OpenDiensten from "./pages/OpenDiensten";
 import Reageren from "./pages/ReagerenPagina";
+import Certificaten from "./pages/Certificaten";
 
 export default function App() {
   return (
@@ -24,6 +26,7 @@ export default function App() {
         <Route path="/terminals" element={<Terminals />} />
         <Route path="/urenregistratie" element={<Urenregistratie />} />
         <Route path="/opendiensten" element={<OpenDiensten />} />
+        <Route path="/certificaten" element={<Certificaten />} />
         <Route path="/rapportages" element={<Rapportages />} />
       </Route>
     </Routes>
