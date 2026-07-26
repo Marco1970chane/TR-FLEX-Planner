@@ -64,19 +64,32 @@ export default function AanbiedModal({
       return;
     }
 
-    for (const medewerker of medewerkers.filter((m) =>
-      geselecteerd.includes(m.naam)
-    )) {
-      await supabase
-        .from("dienst_aanbiedingen")
-        .insert({
-          planning_id: dienst.id,
-          medewerker: medewerker.naam,
-          telefoon: medewerker.telefoon,
-          status: "Verzonden",
-        });
+   for (const medewerker of medewerkers.filter((m) =>
+  geselecteerd.includes(m.naam)
+)) {
 
-      const bericht = `Hallo ${medewerker.naam},
+  const token = crypto.randomUUID();
+
+  const { error } = await supabase
+    .from("dienst_aanbiedingen")
+    .insert({
+      planning_id: dienst.id,
+      medewerker: medewerker.naam,
+      telefoon: medewerker.telefoon,
+      token,
+      status: "Verzonden",
+      verzonden_op: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error(error);
+    continue;
+  }
+
+  const link =
+    `https://tr-flex-planner.vercel.app/reageren/${token}`;
+
+  const bericht = `Hallo ${medewerker.naam},
 
 Er is een open dienst beschikbaar.
 
@@ -84,19 +97,24 @@ Er is een open dienst beschikbaar.
 🕒 Dienst: ${dienst.dienst}
 📍 Terminal: ${dienst.terminal}
 
-Heb je interesse? Laat het weten.`;
+Klik hieronder om direct te reageren:
 
-      const telefoon = (medewerker.telefoon || "").replace(/\D/g, "");
+${link}
 
-      if (telefoon) {
-        window.open(
-          `https://wa.me/${telefoon}?text=${encodeURIComponent(
-            bericht
-          )}`,
-          "_blank"
-        );
-      }
-    }
+Terminal Recruiters`;
+
+  const telefoon =
+    (medewerker.telefoon || "").replace(/\D/g, "");
+
+  if (telefoon) {
+    window.open(
+      `https://wa.me/${telefoon}?text=${encodeURIComponent(
+        bericht
+      )}`,
+      "_blank"
+    );
+  }
+ }
 
     alert("De dienst is aangeboden.");
 
