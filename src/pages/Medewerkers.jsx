@@ -16,44 +16,50 @@ export default function Medewerkers() {
   }, []);
 
   async function laadMedewerkers() {
-    setLoading(true);
+  setLoading(true);
 
-    const { data, error } = await supabase
-      .from("medewerkers")
-      .select("*")
-      .order("naam");
+  const { data, error } = await supabase
+    .from("medewerkers")
+    .select("*")
+    .order("naam");
 
-    setLoading(false);
+  console.log("DATA:", data);
+  console.log("ERROR:", error);
+  console.log("Aantal medewerkers:", data?.length);
 
-    if (error) {
-      alert(error.message);
-      return;
-    }
+  setLoading(false);
 
-    setMedewerkers(data || []);
+  if (error) {
+    alert(error.message);
+    return;
   }
+
+  setMedewerkers(data || []);
+}
+
 
   async function verwijderMedewerker(id) {
-    if (
-      !window.confirm(
-        "Weet je zeker dat je deze medewerker wilt verwijderen?"
-      )
-    ) {
-      return;
-    }
-
-    const { error } = await supabase
-      .from("medewerkers")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    laadMedewerkers();
+  if (
+    !window.confirm(
+      "Weet je zeker dat je deze medewerker wilt verwijderen?"
+    )
+  ) {
+    return;
   }
+
+  const { error } = await supabase
+    .from("medewerkers")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  laadMedewerkers();
+}
+
 
   const gefilterdeMedewerkers = useMemo(() => {
     return medewerkers.filter((m) =>

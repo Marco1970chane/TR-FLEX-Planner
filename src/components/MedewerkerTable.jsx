@@ -43,13 +43,15 @@ export default function MedewerkerTable({
     <table className="medewerker-table">
       <thead>
         <tr>
-          <th>Medewerker</th>
-          <th>Functie</th>
-          <th>Terminal</th>
-          <th>Status</th>
-          <th>Telefoon</th>
-          <th>Acties</th>
-        </tr>
+  <th>Medewerker</th>
+  <th>Functie</th>
+  <th>Rol</th>
+  <th>Terminal</th>
+  <th>Status</th>
+  <th>Account</th>
+  <th>Telefoon</th>
+  <th>Acties</th>
+</tr>
       </thead>
 
       <tbody>
@@ -74,6 +76,11 @@ export default function MedewerkerTable({
             </td>
 
             <td>{m.functie || "-"}</td>
+            <td>
+  <span className={`role-badge role-${m.rol || "medewerker"}`}>
+    {m.rol || "Medewerker"}
+  </span>
+</td>
 
             <td>{m.terminal || "-"}</td>
 
@@ -86,6 +93,13 @@ export default function MedewerkerTable({
                 {m.status || "-"}
               </span>
             </td>
+            <td>
+  {m.actief ? (
+    <span className="badge-active">🟢 Actief</span>
+  ) : (
+    <span className="badge-inactive">⚫ Inactief</span>
+  )}
+</td>
 
             <td>
               {m.telefoon ? (

@@ -7,6 +7,7 @@ import "./index.css";
 import "./styles/opendiensten.css";
 
 import App from "./App.jsx";
+import { AuthProvider } from "./contexts/AuthContext";
 
 // Registreer de PWA service worker
 registerSW({
@@ -16,7 +17,9 @@ registerSW({
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>
 );

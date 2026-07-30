@@ -19,6 +19,8 @@ export default function MedewerkerForm({
   const [telefoon, setTelefoon] = useState("");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("Beschikbaar");
+  const [rol, setRol] = useState("medewerker");
+const [actief, setActief] = useState(true);
 
   useEffect(() => {
     if (!medewerker) return;
@@ -29,19 +31,23 @@ export default function MedewerkerForm({
     setTelefoon(medewerker.telefoon || "");
     setEmail(medewerker.email || "");
     setStatus(medewerker.status || "Beschikbaar");
+    setRol(medewerker.rol || "medewerker");
+setActief(medewerker.actief ?? true);
   }, [medewerker]);
 
   async function opslaan(e) {
     e.preventDefault();
 
     const gegevens = {
-      naam,
-      functie,
-      terminal,
-      telefoon,
-      email,
-      status,
-    };
+  naam,
+  functie,
+  terminal,
+  telefoon,
+  email,
+  status,
+  rol,
+  actief,
+};
 
     let error;
 
@@ -105,20 +111,46 @@ export default function MedewerkerForm({
       />
 
       <label>Status</label>
-      <select
-        value={status}
-        onChange={(e) => setStatus(e.target.value)}
-      >
-        {statussen.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
+<select
+  value={status}
+  onChange={(e) => setStatus(e.target.value)}
+>
+  {statussen.map((s) => (
+    <option key={s} value={s}>
+      {s}
+    </option>
+  ))}
+</select>
 
-      <button className="new-btn" type="submit">
-        {medewerker ? "Opslaan" : "Medewerker toevoegen"}
-      </button>
+<label>Rol</label>
+<select
+  value={rol}
+  onChange={(e) => setRol(e.target.value)}
+>
+  <option value="admin">Admin</option>
+  <option value="operations">Operations</option>
+  <option value="planner">Planner</option>
+  <option value="hr">HR</option>
+  <option value="medewerker">Medewerker</option>
+</select>
+
+<div className="checkbox-row">
+  <input
+    type="checkbox"
+    id="actief"
+    checked={actief}
+    onChange={(e) => setActief(e.target.checked)}
+  />
+
+  <label htmlFor="actief">
+    Actief
+  </label>
+</div>
+
+<button className="new-btn" type="submit">
+  {medewerker ? "Opslaan" : "Medewerker toevoegen"}
+</button>
+      
 
     </form>
   );

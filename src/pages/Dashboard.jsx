@@ -20,13 +20,21 @@ export default function Dashboard() {
   }, []);
 
   async function laadDashboard() {
-    const { data: medewerkers } = await supabase
-      .from("medewerkers")
-      .select("*");
+    const { data: medewerkers, error: medewerkersError } = await supabase
+  .from("medewerkers")
+  .select("*");
 
-    const { data: planning } = await supabase
-      .from("planning")
-      .select("*");
+if (medewerkersError) {
+  console.error("Medewerkers:", medewerkersError);
+}
+
+const { data: planning, error: planningError } = await supabase
+  .from("planning")
+  .select("*");
+
+if (planningError) {
+  console.error("Planning:", planningError);
+}
 
     const vandaag = new Date().toISOString().split("T")[0];
 
