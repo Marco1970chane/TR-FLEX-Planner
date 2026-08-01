@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 import useAuth from "../hooks/useAuth";
 
@@ -6,67 +7,65 @@ export default function Header() {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
 
+  const [tijd, setTijd] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTijd(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   async function logout() {
     await supabase.auth.signOut();
     navigate("/login");
   }
 
+  const initial =
+    (profile?.naam || user?.email || "?")
+      .charAt(0)
+      .toUpperCase();
+
   return (
-    <header
-      style={{
-        height: "70px",
-        background: "#fff",
-        borderBottom: "1px solid #e5e7eb",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "0 25px",
-      }}
-    >
+    <header className="header-bar">
       <div>
-        <h2
-          style={{
-            margin: 0,
-            color: "#0F4C81",
-          }}
-        >
-          🚢 TR-FLEX Planner
-        </h2>
+        <h1>🚢 TR-FLEX Planner</h1>
+
+        <p>
+          {tijd.toLocaleDateString("nl-NL", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+          {" • "}
+          {tijd.toLocaleTimeString("nl-NL")}
+        </p>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "18px",
-        }}
-      >
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontWeight: 600 }}>
-            {profile?.naam || user?.email}
+      <div className="header-right">
+        <button className="icon-btn">🔔</button>
+
+        <div className="user-card">
+          <div className="avatar">
+            {initial}
           </div>
 
-          <div
-            style={{
-              color: "#666",
-              fontSize: "13px",
-            }}
-          >
-            {profile?.rol || "Gebruiker"}
+          <div>
+            <strong>
+              {profile?.naam || user?.email}
+            </strong>
+
+            <div className="user-role">
+              {profile?.rol || "Gebruiker"}
+            </div>
           </div>
         </div>
 
         <button
+          className="new-btn"
           onClick={logout}
-          style={{
-            background: "#dc2626",
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
-            padding: "10px 16px",
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
         >
           🚪 Uitloggen
         </button>

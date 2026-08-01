@@ -20,6 +20,7 @@ import OpenDiensten from "./pages/OpenDiensten";
 import Reageren from "./pages/ReagerenPagina";
 import Certificaten from "./pages/Certificaten";
 import Gebruikers from "./pages/Gebruikers";
+import Toolboxen from "./pages/Toolboxen";
 
 export default function App() {
   return (
@@ -56,6 +57,14 @@ export default function App() {
   element={
     <RoleGuard roles={["admin"]}>
       <Gebruikers />
+    </RoleGuard>
+  }
+/>
+<Route
+  path="/toolboxen"
+  element={
+    <RoleGuard roles={["admin", "operations", "hr"]}>
+      <Toolboxen />
     </RoleGuard>
   }
 />

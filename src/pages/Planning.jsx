@@ -67,15 +67,11 @@ export default function Planning() {
   const gefilterdePlanning = planning.filter((p) => {
   const zoek = zoekterm.toLowerCase();
 
-return (
-  <div style={{ padding: 20 }}>
-    <h1>Planning werkt</h1>
-
-    <p>Aantal diensten: {planning.length}</p>
-
-    <pre>{JSON.stringify(planning, null, 2)}</pre>
-  </div>
-);
+  return (
+    (p.medewerker || "Open dienst").toLowerCase().includes(zoek) ||
+    (p.terminal || "").toLowerCase().includes(zoek) ||
+    (p.status || "").toLowerCase().includes(zoek)
+  );
 });
     
       

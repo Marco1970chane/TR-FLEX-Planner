@@ -7,7 +7,14 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div>
         <h2>TR Planner</h2>
-        <p style={{ opacity: 0.7, marginTop: "-15px", marginBottom: "30px" }}>
+
+        <p
+          style={{
+            opacity: 0.7,
+            marginTop: "-15px",
+            marginBottom: "30px",
+          }}
+        >
           Terminal Recruiters
         </p>
 
@@ -32,13 +39,31 @@ export default function Sidebar() {
           </NavLink>
 
           <NavLink
-            to="/medewerkers"
-            className={({ isActive }) =>
-              isActive ? "menu-item active" : "menu-item"
-            }
-          >
-            👷 Medewerkers
-          </NavLink>
+  to="/medewerkers"
+  className={({ isActive }) =>
+    isActive ? "menu-item active" : "menu-item"
+  }
+>
+  👷 Medewerkers
+</NavLink>
+
+<NavLink
+  to="/toolboxen"
+  className={({ isActive }) =>
+    isActive ? "menu-item active" : "menu-item"
+  }
+>
+  📦 Toolboxen
+</NavLink>
+
+<NavLink
+  to="/gebruikers"
+  className={({ isActive }) =>
+    isActive ? "menu-item active" : "menu-item"
+  }
+>
+  👤 Gebruikersbeheer
+</NavLink>
 
           <NavLink
             to="/terminals"
@@ -65,6 +90,15 @@ export default function Sidebar() {
             }
           >
             📢 Open diensten
+          </NavLink>
+
+          <NavLink
+            to="/certificaten"
+            className={({ isActive }) =>
+              isActive ? "menu-item active" : "menu-item"
+            }
+          >
+            🏅 Certificaten
           </NavLink>
 
           <NavLink

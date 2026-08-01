@@ -7,6 +7,7 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div>
         <h2>TR Planner</h2>
+
         <p
           style={{
             opacity: 0.7,
@@ -46,6 +47,24 @@ export default function Sidebar() {
             👷 Medewerkers
           </NavLink>
 
+        
+<NavLink
+  to="/toolboxen"
+  className={({ isActive }) =>
+    isActive ? "menu-item active" : "menu-item"
+  }
+>
+  📦 Toolboxen
+</NavLink>
+
+<NavLink
+  to="/gebruikers"
+  className={({ isActive }) =>
+    isActive ? "menu-item active" : "menu-item"
+  }
+>
+  👤 Gebruikersbeheer
+</NavLink>
           <NavLink
             to="/terminals"
             className={({ isActive }) =>

@@ -7,26 +7,20 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: corsHeaders,
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { naam, email, rol } = await req.json();
+    const { email } = await req.json();
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      data: {
-        naam,
-        rol,
-      },
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "http://localhost:5173/reset-password",
     });
 
     if (error) {
@@ -48,7 +42,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Uitnodiging verzonden naar ${email}`,
+        message: `Resetmail verzonden naar ${email}`,
       }),
       {
         status: 200,

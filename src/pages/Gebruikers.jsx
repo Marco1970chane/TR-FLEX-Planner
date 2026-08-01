@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "../services/supabase";
+import { supabase, inviteUser } from "../services/supabase";
+
+import GebruikersStats from "../components/gebruikers/GebruikersStats";
+import GebruikersFilters from "../components/gebruikers/GebruikersFilters";
+import GebruikersTabel from "../components/gebruikers/GebruikersTabel";
+import NieuweGebruikerModal from "../components/gebruikers/NieuweGebruikerModal";
+import { resetPassword } from "../services/supabase";
 
 export default function Gebruikers() {
   const [gebruikers, setGebruikers] = useState([]);
@@ -8,6 +14,12 @@ export default function Gebruikers() {
   const [zoekterm, setZoekterm] = useState("");
   const [rolFilter, setRolFilter] = useState("alle");
   const [statusFilter, setStatusFilter] = useState("alle");
+
+  const [popupOpen, setPopupOpen] = useState(false);
+
+  const [naam, setNaam] = useState("");
+  const [email, setEmail] = useState("");
+  const [rol, setRol] = useState("medewerker");
 
   useEffect(() => {
     laadGebruikers();
@@ -30,122 +42,121 @@ export default function Gebruikers() {
     setLoading(false);
   }
 
+  async function wijzigRol(id, nieuweRol) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ rol: nieuweRol })
+      .eq("id", id);
+
+    if (!error) laadGebruikers();
+  }
+
+  async function wijzigStatus(id, actief) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ actief })
+      .eq("id", id);
+
+    if (!error) laadGebruikers();
+  }
+
+  async function nieuweGebruiker() {
+    try {
+      const result = await inviteUser({
+        naam,
+        email,
+        rol,
+      });
+
+      alert(result.message);
+
+      setNaam("");
+      setEmail("");
+      setRol("medewerker");
+
+      setPopupOpen(false);
+
+      laadGebruikers();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+  async function resetWachtwoord(email) {
+  try {
+    const result = await resetPassword(email);
+    alert(result.message);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
   const gefilterdeGebruikers = useMemo(() => {
     return gebruikers.filter((g) => {
       const zoek =
         (g.naam || "").toLowerCase().includes(zoekterm.toLowerCase()) ||
         (g.email || "").toLowerCase().includes(zoekterm.toLowerCase());
 
-      const rol =
+      const rolOk =
         rolFilter === "alle" || g.rol === rolFilter;
 
-      const status =
+      const statusOk =
         statusFilter === "alle" ||
         (statusFilter === "actief" && g.actief) ||
         (statusFilter === "inactief" && !g.actief);
 
-      return zoek && rol && status;
+      return zoek && rolOk && statusOk;
     });
   }, [gebruikers, zoekterm, rolFilter, statusFilter]);
 
   return (
     <div className="table">
-
       <div className="page-header">
         <div>
           <h2>👤 Gebruikersbeheer</h2>
           <p>{gebruikers.length} gebruikers</p>
         </div>
-      </div>
 
-      <div className="stats-row">
-        <div className="stat-card">
-          <h3>{gebruikers.length}</h3>
-          <span>Totaal</span>
-        </div>
-
-        <div className="stat-card">
-          <h3>{gebruikers.filter(g => g.actief).length}</h3>
-          <span>Actief</span>
-        </div>
-
-        <div className="stat-card">
-          <h3>{gebruikers.filter(g => !g.actief).length}</h3>
-          <span>Inactief</span>
-        </div>
-
-        <div className="stat-card">
-          <h3>{gebruikers.filter(g => g.rol === "admin").length}</h3>
-          <span>Admins</span>
-        </div>
-      </div>
-
-      <div className="filters">
-        <input
-          className="search-input"
-          type="text"
-          placeholder="🔍 Zoek op naam of e-mail..."
-          value={zoekterm}
-          onChange={(e) => setZoekterm(e.target.value)}
-        />
-
-        <select
-          value={rolFilter}
-          onChange={(e) => setRolFilter(e.target.value)}
+        <button
+          className="new-btn"
+          onClick={() => setPopupOpen(true)}
         >
-          <option value="alle">Alle rollen</option>
-          <option value="admin">Admin</option>
-          <option value="operations">Operations</option>
-          <option value="planner">Planner</option>
-          <option value="hr">HR</option>
-          <option value="medewerker">Medewerker</option>
-        </select>
-
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="alle">Alle statussen</option>
-          <option value="actief">Actief</option>
-          <option value="inactief">Inactief</option>
-        </select>
+          + Nieuwe gebruiker
+        </button>
       </div>
+
+      <GebruikersStats gebruikers={gebruikers} />
+
+      <GebruikersFilters
+        zoekterm={zoekterm}
+        setZoekterm={setZoekterm}
+        rolFilter={rolFilter}
+        setRolFilter={setRolFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+      />
 
       {loading ? (
         <p>Gebruikers laden...</p>
       ) : (
-        <table className="medewerker-table">
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>E-mail</th>
-              <th>Rol</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {gefilterdeGebruikers.map((g) => (
-              <tr key={g.id}>
-                <td>{g.naam}</td>
-                <td>{g.email}</td>
-                <td>
-  <span className={`role-badge role-${g.rol}`}>
-    {g.rol}
-  </span>
-</td>
-                <td>
-                  {g.actief ? (
-                    <span className="badge-active">🟢 Actief</span>
-                  ) : (
-                    <span className="badge-inactive">⚫ Inactief</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <GebruikersTabel
+          gebruikers={gefilterdeGebruikers}
+          wijzigRol={wijzigRol}
+          wijzigStatus={wijzigStatus}
+           onResetPassword={resetWachtwoord}
+        />
       )}
+
+      <NieuweGebruikerModal
+        open={popupOpen}
+        onClose={() => setPopupOpen(false)}
+        onSave={nieuweGebruiker}
+        naam={naam}
+        setNaam={setNaam}
+        email={email}
+        setEmail={setEmail}
+        rol={rol}
+        setRol={setRol}
+      />
     </div>
   );
 }
