@@ -39,6 +39,15 @@ export default function Sidebar() {
           </NavLink>
 
           <NavLink
+  to="/jaarplanner"
+  className={({ isActive }) =>
+    isActive ? "menu-item active" : "menu-item"
+  }
+>
+  🗓 Jaarplanner
+</NavLink>
+
+          <NavLink
             to="/medewerkers"
             className={({ isActive }) =>
               isActive ? "menu-item active" : "menu-item"

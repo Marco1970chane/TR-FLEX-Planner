@@ -21,6 +21,7 @@ import Reageren from "./pages/ReagerenPagina";
 import Certificaten from "./pages/Certificaten";
 import Gebruikers from "./pages/Gebruikers";
 import Toolboxen from "./pages/Toolboxen";
+import JaarPlanner from "./pages/JaarPlanner";
 
 export default function App() {
   return (
@@ -48,6 +49,10 @@ export default function App() {
 
         {/* Planning */}
         <Route path="/planning" element={<Planning />} />
+        <Route
+  path="/jaarplanner"
+  element={<JaarPlanner />}
+/>
 
         {/* Medewerkers */}
         <Route path="/medewerkers" element={<Medewerkers />} />

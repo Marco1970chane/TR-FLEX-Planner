@@ -25,7 +25,7 @@ export async function inviteUser({ naam, email, rol }) {
 }
 export async function resetPassword(email) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: "http://localhost:5173/reset-password",
+    redirectTo: "https://tr-flex-planner.vercel.app/reset-password",
   });
 
   if (error) throw error;
