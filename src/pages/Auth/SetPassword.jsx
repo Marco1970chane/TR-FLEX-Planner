@@ -8,26 +8,31 @@ export default function SetPassword() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function opslaan(e) {
-    e.preventDefault();
+ async function opslaan(e) {
+  e.preventDefault();
 
-    setLoading(true);
-
-    const { error } = await supabase.auth.updateUser({
-      password,
-    });
-
-    setLoading(false);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    alert("Wachtwoord ingesteld.");
-
-    navigate("/");
+  if (password.length < 8) {
+    alert("Gebruik minimaal 8 tekens.");
+    return;
   }
+
+  setLoading(true);
+
+  const { error } = await supabase.auth.updateUser({
+    password,
+  });
+
+  setLoading(false);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("Je wachtwoord is ingesteld.");
+
+  navigate("/");
+}
 
   return (
     <div

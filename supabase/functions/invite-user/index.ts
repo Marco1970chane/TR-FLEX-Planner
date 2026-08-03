@@ -23,27 +23,30 @@ Deno.serve(async (req) => {
     );
 
     const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      data: {
-        naam,
-        rol,
-      },
-    });
+  data: {
+    naam,
+    rol,
+  },
+});
 
     if (error) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: error.message,
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  console.error("Invite error:", error);
+
+  return new Response(
+    JSON.stringify({
+      success: false,
+      message: error.message,
+      error,
+    }),
+    {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     }
+  );
+}
 
     return new Response(
       JSON.stringify({
