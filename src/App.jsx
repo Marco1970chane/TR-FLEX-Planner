@@ -22,6 +22,8 @@ import Certificaten from "./pages/Certificaten";
 import Gebruikers from "./pages/Gebruikers";
 import Toolboxen from "./pages/Toolboxen";
 import JaarPlanner from "./pages/JaarPlanner";
+import SetPassword from "./pages/Auth/SetPassword";
+
 
 export default function App() {
   return (
@@ -32,6 +34,10 @@ export default function App() {
 
       <Route path="/login" element={<Login />} />
       <Route path="/reageren/:token" element={<Reageren />} />
+      <Route
+  path="/set-password"
+  element={<SetPassword />}
+/>
 
       {/* ===========================
           Beveiligde applicatie
