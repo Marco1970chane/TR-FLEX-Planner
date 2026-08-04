@@ -1,8 +1,18 @@
 export default function ToolboxTabel({
   toolboxen,
+  onView,
   onEdit,
   onDelete,
 }) {
+  if (!toolboxen.length) {
+    return (
+      <div className="table-empty">
+        <h3>📦 Geen toolboxen gevonden</h3>
+        <p>Er zijn geen toolboxen die aan de huidige filters voldoen.</p>
+      </div>
+    );
+  }
+
   return (
     <table className="medewerker-table">
       <thead>
@@ -12,7 +22,7 @@ export default function ToolboxTabel({
           <th>Versie</th>
           <th>Geldig</th>
           <th>Status</th>
-          <th>PDF</th>
+          <th>Document</th>
           <th>Acties</th>
         </tr>
       </thead>
@@ -20,7 +30,9 @@ export default function ToolboxTabel({
       <tbody>
         {toolboxen.map((t) => (
           <tr key={t.id}>
-            <td>{t.titel}</td>
+            <td>
+              <strong>{t.titel}</strong>
+            </td>
 
             <td>{t.categorie}</td>
 
@@ -42,19 +54,15 @@ export default function ToolboxTabel({
 
             <td>
               {t.pdf_url ? (
-                <a
-                  href={t.pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
                   className="new-btn"
                   style={{
                     background: "#16a34a",
-                    textDecoration: "none",
-                    display: "inline-block",
                   }}
+                  onClick={() => onView(t)}
                 >
-                  📄 Open PDF
-                </a>
+                  📄 Bekijken
+                </button>
               ) : (
                 <span
                   style={{
@@ -67,31 +75,44 @@ export default function ToolboxTabel({
               )}
             </td>
 
-            <td
-              style={{
-                display: "flex",
-                gap: "8px",
-              }}
-            >
-              <button
-                className="new-btn"
-                style={{
-                  background: "#2563eb",
-                }}
-                onClick={() => onEdit(t)}
-              >
-                ✏️ Bewerken
-              </button>
+            <td>
+              {onEdit ? (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "8px",
+                  }}
+                >
+                  <button
+                    className="new-btn"
+                    style={{
+                      background: "#2563eb",
+                    }}
+                    onClick={() => onEdit(t)}
+                  >
+                    ✏️ Bewerken
+                  </button>
 
-              <button
-                className="new-btn"
-                style={{
-                  background: "#dc2626",
-                }}
-                onClick={() => onDelete(t.id)}
-              >
-                🗑 Verwijderen
-              </button>
+                  <button
+                    className="new-btn"
+                    style={{
+                      background: "#dc2626",
+                    }}
+                    onClick={() => onDelete(t.id)}
+                  >
+                    🗑 Verwijderen
+                  </button>
+                </div>
+              ) : (
+                <span
+                  style={{
+                    color: "#9ca3af",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Alleen bekijken
+                </span>
+              )}
             </td>
           </tr>
         ))}

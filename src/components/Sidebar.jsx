@@ -6,11 +6,12 @@ import { useAuthContext } from "../contexts/AuthContext";
 export default function Sidebar() {
   const { profile } = useAuthContext();
 
-  const isAdmin = profile?.rol === "admin";
-  const isPlanner = profile?.rol === "planner";
-  const isOperations = profile?.rol === "operations";
-  const isHR = profile?.rol === "hr";
   const rol = profile?.rol || "medewerker";
+
+  const isAdmin = rol === "admin";
+  const isPlanner = rol === "planner";
+  const isOperations = rol === "operations";
+  const isHR = rol === "hr";
 
   return (
     <aside className="sidebar">
@@ -74,16 +75,36 @@ export default function Sidebar() {
           )}
 
           {/* Toolboxen */}
-          {(isAdmin || isOperations || isHR) && (
+          <NavLink
+            to="/toolboxen"
+            className={({ isActive }) =>
+              isActive ? "menu-item active" : "menu-item"
+            }
+          >
+            📦 Toolboxen
+          </NavLink>
+
+          {/* Toolbox Vragen */}
+          {(isAdmin || isHR || isOperations) && (
             <NavLink
-              to="/toolboxen"
+              to="/toolboxvragen"
               className={({ isActive }) =>
                 isActive ? "menu-item active" : "menu-item"
               }
             >
-              📦 Toolboxen
+              ❓ Toolbox Vragen
             </NavLink>
           )}
+
+          {/* Mijn Toolboxen */}
+          <NavLink
+            to="/mijntoolboxen"
+            className={({ isActive }) =>
+              isActive ? "menu-item active" : "menu-item"
+            }
+          >
+            🎓 Mijn Toolboxen
+          </NavLink>
 
           {/* Gebruikersbeheer */}
           {isAdmin && (

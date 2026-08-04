@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
-import {
-  supabase,
-  uploadToolboxPdf,
-} from "../services/supabase";
+import { supabase } from "../services/supabase";
+import { useAuthContext } from "../contexts/AuthContext";
 
 import ToolboxStats from "../components/toolbox/ToolboxStats";
 import ToolboxFilters from "../components/toolbox/ToolboxFilters";
 import ToolboxTabel from "../components/toolbox/ToolboxTabel";
 import NieuweToolboxModal from "../components/toolbox/NieuweToolboxModal";
+import ToolboxViewer from "../components/toolbox/ToolboxViewer";
 
 export default function Toolboxen() {
+  const { profile } = useAuthContext();
+
+  const magBeheren =
+    profile?.rol === "admin" ||
+    profile?.rol === "operations" ||
+    profile?.rol === "hr";
+
   const [toolboxen, setToolboxen] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,6 +23,9 @@ export default function Toolboxen() {
 
   const [popupOpen, setPopupOpen] = useState(false);
   const [editId, setEditId] = useState(null);
+
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedToolbox, setSelectedToolbox] = useState(null);
 
   const [titel, setTitel] = useState("");
   const [omschrijving, setOmschrijving] = useState("");
@@ -88,14 +97,12 @@ export default function Toolboxen() {
     }
 
     resetForm();
-
     setPopupOpen(false);
-
     laadToolboxen();
   }
 
   async function verwijderToolbox(id) {
-    if (!confirm("Toolbox verwijderen?")) return;
+    if (!window.confirm("Toolbox verwijderen?")) return;
 
     const { error } = await supabase
       .from("toolboxen")
@@ -127,7 +134,6 @@ export default function Toolboxen() {
 
   function resetForm() {
     setEditId(null);
-
     setTitel("");
     setOmschrijving("");
     setCategorie("Veiligheid");
@@ -152,15 +158,17 @@ export default function Toolboxen() {
           <p>{toolboxen.length} toolboxen</p>
         </div>
 
-        <button
-          className="new-btn"
-          onClick={() => {
-            resetForm();
-            setPopupOpen(true);
-          }}
-        >
-          + Nieuwe toolbox
-        </button>
+        {magBeheren && (
+          <button
+            className="new-btn"
+            onClick={() => {
+              resetForm();
+              setPopupOpen(true);
+            }}
+          >
+            + Nieuwe toolbox
+          </button>
+        )}
       </div>
 
       <ToolboxStats toolboxen={toolboxen} />
@@ -175,31 +183,46 @@ export default function Toolboxen() {
       ) : (
         <ToolboxTabel
           toolboxen={gefilterd}
-          onEdit={bewerkToolbox}
-          onDelete={verwijderToolbox}
+          onView={(toolbox) => {
+            setSelectedToolbox(toolbox);
+            setViewerOpen(true);
+          }}
+          onEdit={magBeheren ? bewerkToolbox : undefined}
+          onDelete={magBeheren ? verwijderToolbox : undefined}
         />
       )}
 
-      <NieuweToolboxModal
-        open={popupOpen}
-        onClose={() => setPopupOpen(false)}
-        onSave={opslaanToolbox}
-        titel={titel}
-        setTitel={setTitel}
-        omschrijving={omschrijving}
-        setOmschrijving={setOmschrijving}
-        categorie={categorie}
-        setCategorie={setCategorie}
-        pdfUrl={pdfUrl}
-        setPdfUrl={setPdfUrl}
-        videoUrl={videoUrl}
-        setVideoUrl={setVideoUrl}
-        versie={versie}
-        setVersie={setVersie}
-        geldigMaanden={geldigMaanden}
-        setGeldigMaanden={setGeldigMaanden}
-        actief={actief}
-        setActief={setActief}
+      {magBeheren && (
+        <NieuweToolboxModal
+          open={popupOpen}
+          onClose={() => setPopupOpen(false)}
+          onSave={opslaanToolbox}
+          titel={titel}
+          setTitel={setTitel}
+          omschrijving={omschrijving}
+          setOmschrijving={setOmschrijving}
+          categorie={categorie}
+          setCategorie={setCategorie}
+          pdfUrl={pdfUrl}
+          setPdfUrl={setPdfUrl}
+          videoUrl={videoUrl}
+          setVideoUrl={setVideoUrl}
+          versie={versie}
+          setVersie={setVersie}
+          geldigMaanden={geldigMaanden}
+          setGeldigMaanden={setGeldigMaanden}
+          actief={actief}
+          setActief={setActief}
+        />
+      )}
+
+      <ToolboxViewer
+        open={viewerOpen}
+        toolbox={selectedToolbox}
+        onClose={() => {
+          setViewerOpen(false);
+          setSelectedToolbox(null);
+        }}
       />
     </div>
   );

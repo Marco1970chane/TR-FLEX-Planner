@@ -10,8 +10,11 @@ import RoleGuard from "./components/auth/RoleGuard";
 
 // Pagina's
 import Login from "./pages/Auth/Login";
+import SetPassword from "./pages/Auth/SetPassword";
+
 import Dashboard from "./pages/Dashboard";
 import Planning from "./pages/Planning";
+import JaarPlanner from "./pages/JaarPlanner";
 import Medewerkers from "./pages/Medewerkers";
 import Terminals from "./pages/Terminals";
 import Rapportages from "./pages/Rapportages";
@@ -21,9 +24,7 @@ import Reageren from "./pages/ReagerenPagina";
 import Certificaten from "./pages/Certificaten";
 import Gebruikers from "./pages/Gebruikers";
 import Toolboxen from "./pages/Toolboxen";
-import JaarPlanner from "./pages/JaarPlanner";
-import SetPassword from "./pages/Auth/SetPassword";
-
+import MijnToolboxen from "./pages/MijnToolboxen";
 
 export default function App() {
   return (
@@ -33,11 +34,16 @@ export default function App() {
       ============================ */}
 
       <Route path="/login" element={<Login />} />
-      <Route path="/reageren/:token" element={<Reageren />} />
+
       <Route
-  path="/set-password"
-  element={<SetPassword />}
-/>
+        path="/set-password"
+        element={<SetPassword />}
+      />
+
+      <Route
+        path="/reageren/:token"
+        element={<Reageren />}
+      />
 
       {/* ===========================
           Beveiligde applicatie
@@ -51,44 +57,121 @@ export default function App() {
         }
       >
         {/* Dashboard */}
-        <Route path="/" element={<Dashboard />} />
+        <Route
+          path="/"
+          element={<Dashboard />}
+        />
 
         {/* Planning */}
-        <Route path="/planning" element={<Planning />} />
         <Route
-  path="/jaarplanner"
-  element={<JaarPlanner />}
-/>
+          path="/planning"
+          element={<Planning />}
+        />
+
+        {/* Jaarplanner */}
+        <Route
+          path="/jaarplanner"
+          element={
+            <RoleGuard
+              roles={[
+                "admin",
+                "planner",
+                "operations",
+              ]}
+            >
+              <JaarPlanner />
+            </RoleGuard>
+          }
+        />
 
         {/* Medewerkers */}
-        <Route path="/medewerkers" element={<Medewerkers />} />
-        {/* Gebruikers */}
-<Route
-  path="/gebruikers"
-  element={
-    <RoleGuard roles={["admin"]}>
-      <Gebruikers />
-    </RoleGuard>
-  }
-/>
-<Route
-  path="/toolboxen"
-  element={
-    <RoleGuard roles={["admin", "operations", "hr"]}>
-      <Toolboxen />
-    </RoleGuard>
-  }
-/>
+        <Route
+          path="/medewerkers"
+          element={
+            <RoleGuard
+              roles={[
+                "admin",
+                "planner",
+                "operations",
+                "hr",
+              ]}
+            >
+              <Medewerkers />
+            </RoleGuard>
+          }
+        />
+
+        {/* Toolboxen */}
+        <Route
+          path="/toolboxen"
+          element={
+            <RoleGuard
+              roles={[
+                "admin",
+                "operations",
+                "hr",
+                "planner",
+                "medewerker",
+              ]}
+            >
+              <Toolboxen />
+            </RoleGuard>
+          }
+        />
+
+        {/* Mijn Toolboxen */}
+        <Route
+          path="/mijntoolboxen"
+          element={
+            <RoleGuard
+              roles={[
+                "admin",
+                "operations",
+                "hr",
+                "planner",
+                "medewerker",
+              ]}
+            >
+              <MijnToolboxen />
+            </RoleGuard>
+          }
+        />
+
+        {/* Gebruikersbeheer */}
+        <Route
+          path="/gebruikers"
+          element={
+            <RoleGuard roles={["admin"]}>
+              <Gebruikers />
+            </RoleGuard>
+          }
+        />
 
         {/* Terminals */}
-        <Route path="/terminals" element={<Terminals />} />
+        <Route
+          path="/terminals"
+          element={
+            <RoleGuard
+              roles={[
+                "admin",
+                "operations",
+              ]}
+            >
+              <Terminals />
+            </RoleGuard>
+          }
+        />
 
         {/* Urenregistratie */}
         <Route
           path="/urenregistratie"
           element={
             <RoleGuard
-              roles={["admin", "operations", "planner"]}
+              roles={[
+                "admin",
+                "operations",
+                "planner",
+              ]}
             >
               <Urenregistratie />
             </RoleGuard>
@@ -117,7 +200,11 @@ export default function App() {
           path="/certificaten"
           element={
             <RoleGuard
-              roles={["admin", "operations", "hr"]}
+              roles={[
+                "admin",
+                "operations",
+                "hr",
+              ]}
             >
               <Certificaten />
             </RoleGuard>
@@ -129,7 +216,10 @@ export default function App() {
           path="/rapportages"
           element={
             <RoleGuard
-              roles={["admin", "operations"]}
+              roles={[
+                "admin",
+                "operations",
+              ]}
             >
               <Rapportages />
             </RoleGuard>
