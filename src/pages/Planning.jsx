@@ -1,12 +1,22 @@
-import PlanningStats from "../components/planning/PlanningStats";
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
+import { useAuthContext } from "../contexts/AuthContext";
+
+import PlanningStats from "../components/planning/PlanningStats";
 import PlanningForm from "../components/PlanningForm";
 import PlanningTable from "../components/planning/PlanningTable";
 import WeekPlanner from "../components/planning/WeekPlanner";
 import DagPlanner from "../components/planning/DagPlanner";
 
 export default function Planning() {
+  const { profile } = useAuthContext();
+
+  const magBeheren = [
+    "admin",
+    "planner",
+    "operations",
+  ].includes(profile?.rol);
+
   const [planning, setPlanning] = useState([]);
   const [toonForm, setToonForm] = useState(false);
   const [geselecteerdePlanning, setGeselecteerdePlanning] = useState(null);
@@ -18,8 +28,10 @@ export default function Planning() {
   );
 
   useEffect(() => {
-    laadPlanning();
-  }, []);
+    if (profile) {
+      laadPlanning();
+    }
+  }, [profile]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 900px)");
@@ -36,14 +48,23 @@ export default function Planning() {
   }, []);
 
   async function laadPlanning() {
-    const { data, error } = await supabase
+    let query = supabase
       .from("planning")
       .select("*")
       .order("datum");
 
-    if (!error) {
-      setPlanning(data);
+    if (profile?.rol === "medewerker") {
+      query = query.eq("medewerker", profile.naam);
     }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setPlanning(data || []);
   }
 
   async function verwijderPlanning(id) {
@@ -65,18 +86,14 @@ export default function Planning() {
   }
 
   const gefilterdePlanning = planning.filter((p) => {
-  const zoek = zoekterm.toLowerCase();
+    const zoek = zoekterm.toLowerCase();
 
-  return (
-    (p.medewerker || "Open dienst").toLowerCase().includes(zoek) ||
-    (p.terminal || "").toLowerCase().includes(zoek) ||
-    (p.status || "").toLowerCase().includes(zoek)
-  );
-});
-    
-      
-      
-  
+    return (
+      (p.medewerker || "Open dienst").toLowerCase().includes(zoek) ||
+      (p.terminal || "").toLowerCase().includes(zoek) ||
+      (p.status || "").toLowerCase().includes(zoek)
+    );
+  });
 
   function openPlanning(planningItem) {
     setGeselecteerdePlanning(planningItem);
@@ -96,17 +113,19 @@ export default function Planning() {
         >
           <h2>📅 Planning</h2>
 
-          <button
-            className="new-btn"
-            onClick={() => {
-              setGeselecteerdePlanning(null);
-              setToonForm(true);
-            }}
-          >
-            + Nieuwe dienst
-            
-          </button>
+          {magBeheren && (
+            <button
+              className="new-btn"
+              onClick={() => {
+                setGeselecteerdePlanning(null);
+                setToonForm(true);
+              }}
+            >
+              + Nieuwe dienst
+            </button>
+          )}
         </div>
+
         <PlanningStats planning={planning} />
 
         <div
@@ -165,7 +184,7 @@ export default function Planning() {
           ))}
       </div>
 
-      {toonForm && (
+      {magBeheren && toonForm && (
         <div className="modal">
           <div className="modal-content">
             <PlanningForm
