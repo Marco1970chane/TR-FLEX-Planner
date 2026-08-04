@@ -1,239 +1,349 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../services/supabase";
+import "../../styles/opendiensten.css";
 
 export default function AanbiedModal({
   open,
-  dienst,
   onClose,
+  dienst,
   onVerzonden,
 }) {
   const [medewerkers, setMedewerkers] = useState([]);
   const [geselecteerd, setGeselecteerd] = useState([]);
+  const [zoekterm, setZoekterm] = useState("");
+
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-
-    setGeselecteerd([]);
-    laadMedewerkers();
-  }, [open]);
+  const [melding, setMelding] = useState("");
+  const [error, setError] = useState("");
+  const [progress, setProgress] = useState(0);
 
   async function laadMedewerkers() {
+    setLoading(true);
+
     const { data, error } = await supabase
       .from("medewerkers")
       .select("*")
+      .eq("status", "Beschikbaar")
       .order("naam");
 
     if (error) {
       console.error(error);
-      return;
+      setError("Medewerkers konden niet worden geladen.");
+    } else {
+      setMedewerkers(data || []);
     }
-
-    setMedewerkers(data || []);
-  }
-
-  function toggle(id) {
-    setGeselecteerd((huidig) =>
-      huidig.includes(id)
-        ? huidig.filter((x) => x !== id)
-        : [...huidig, id]
-    );
-  }
-
-  async function versturen() {
-    if (geselecteerd.length === 0) {
-      alert("Selecteer minimaal één medewerker.");
-      return;
-    }
-
-    setLoading(true);
-
-    const geselecteerdeMedewerkers = medewerkers.filter((m) =>
-      geselecteerd.includes(m.id)
-    );
-
-    const records = geselecteerdeMedewerkers.map((m) => ({
-      planning_id: dienst.id,
-      medewerker: m.naam,
-      telefoon: m.telefoon || null,
-      status: "Verzonden",
-    }));
-
-    const { data, error } = await supabase
-      .from("dienst_aanbiedingen")
-      .insert(records)
-      .select();
 
     setLoading(false);
+  }
 
-    if (error) {
-      console.error(error);
-      alert(error.message);
-      return;
-    }
+  useEffect(() => {
+    if (!open) return;
 
-    onVerzonden?.();
+    setZoekterm("");
+    setGeselecteerd([]);
+    setProgress(0);
+    setError("");
+    setMelding("");
 
-    const links = data.map((aanbieding) => {
-      const medewerker = geselecteerdeMedewerkers.find(
-        (m) => m.naam === aanbieding.medewerker
+    laadMedewerkers();
+  }, [open]);
+
+  const filteredMedewerkers = useMemo(() => {
+    return medewerkers.filter((m) => {
+      if (!zoekterm) return true;
+
+      const zoek = zoekterm.toLowerCase();
+
+      return (
+        m.naam?.toLowerCase().includes(zoek) ||
+        m.functie?.toLowerCase().includes(zoek) ||
+        m.terminal?.toLowerCase().includes(zoek)
+      );
+    });
+  }, [medewerkers, zoekterm]);
+
+  if (!open || !dienst) return null;
+  const toggleMedewerker = (id) => {
+  setGeselecteerd((prev) =>
+    prev.includes(id)
+      ? prev.filter((x) => x !== id)
+      : [...prev, id]
+  );
+};
+
+const allesSelecteren = () => {
+  setGeselecteerd(filteredMedewerkers.map((m) => m.id));
+};
+
+const allesWissen = () => {
+  setGeselecteerd([]);
+};
+
+const geselecteerdeMedewerkers = medewerkers.filter((m) =>
+  geselecteerd.includes(m.id)
+);
+
+const controleerDubbeleAanbieding = async (
+  planningId,
+  medewerkerNaam
+) => {
+  const { data, error } = await supabase
+    .from("dienst_aanbiedingen")
+    .select("id")
+    .eq("planning_id", planningId)
+    .eq("medewerker", medewerkerNaam)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return false;
+  }
+
+  return !!data;
+};
+
+
+const openWhatsapp = (telefoon, bericht) => {
+  const nummer = (telefoon || "").replace(/\D/g, "");
+
+  if (!nummer) return;
+
+  window.open(
+    `https://wa.me/${nummer}?text=${encodeURIComponent(bericht)}`,
+    "_blank"
+  );
+};
+const versturen = async () => {
+  if (!dienst) return;
+
+  if (geselecteerdeMedewerkers.length === 0) {
+    setError("Selecteer minimaal één medewerker.");
+    return;
+  }
+
+  setSending(true);
+  setError("");
+  setMelding("");
+  setProgress(0);
+
+  let verwerkt = 0;
+
+  for (const medewerker of geselecteerdeMedewerkers) {
+    try {
+      const bestaat = await controleerDubbeleAanbieding(
+        dienst.id,
+        medewerker.naam
       );
 
-      if (!medewerker?.telefoon) return null;
+      if (bestaat) {
+        verwerkt++;
 
-      const bericht = encodeURIComponent(
-`Hallo ${aanbieding.medewerker},
+        setProgress(
+          Math.round(
+            (verwerkt / geselecteerdeMedewerkers.length) * 100
+          )
+        );
 
-Er staat een open dienst voor je klaar.
+        continue;
+      }
+
+      // Maak unieke token
+      const token = crypto.randomUUID();
+
+      // Sla aanbieding op
+      const { data, error } = await supabase
+        .from("dienst_aanbiedingen")
+        .insert({
+          planning_id: dienst.id,
+          medewerker: medewerker.naam,
+          telefoon: medewerker.telefoon,
+          token,
+          status: "Verzonden",
+          verzonden_op: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const link = `https://tr-flex-planner.vercel.app/reageren/${data.token}`;
+
+      console.log("TOKEN:", data.token);
+      console.log("LINK:", link);
+
+      const bericht = `Hallo ${medewerker.naam},
+
+Er is een open dienst beschikbaar.
 
 📅 Datum: ${dienst.datum}
 🕒 Dienst: ${dienst.dienst}
 📍 Terminal: ${dienst.terminal}
 
-Accepteren of weigeren?
+Klik hieronder om direct te reageren:
 
-Klik op onderstaande link:
+${link}
 
-https://tr-flex-planner.vercel.app/reageren/${aanbieding.token}`
+Terminal Recruiters`;
+
+      openWhatsapp(
+        medewerker.telefoon,
+        bericht
       );
 
-      return {
-        naam: aanbieding.medewerker,
-        telefoon: medewerker.telefoon,
-        url: `https://wa.me/${medewerker.telefoon}?text=${bericht}`,
-      };
-    }).filter(Boolean);
+      verwerkt++;
 
-    const popup = window.open("", "_blank");
+      setProgress(
+        Math.round(
+          (verwerkt / geselecteerdeMedewerkers.length) * 100
+        )
+      );
 
-    if (popup) {
-      popup.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>WhatsApp berichten</title>
-          <style>
-            body{
-              font-family:Arial,sans-serif;
-              padding:30px;
-              background:#f5f5f5;
-            }
-
-            h2{
-              margin-bottom:25px;
-            }
-
-            .persoon{
-              background:white;
-              padding:15px;
-              margin-bottom:15px;
-              border-radius:8px;
-              box-shadow:0 2px 6px rgba(0,0,0,.1);
-            }
-
-            a{
-              display:inline-block;
-              margin-top:10px;
-              padding:10px 16px;
-              background:#25D366;
-              color:white;
-              text-decoration:none;
-              border-radius:6px;
-              font-weight:bold;
-            }
-
-            a:hover{
-              background:#1faa52;
-            }
-          </style>
-        </head>
-
-        <body>
-
-          <h2>📱 WhatsApp berichten</h2>
-
-          ${links
-            .map(
-              (l) => `
-                <div class="persoon">
-                  <strong>${l.naam}</strong><br>
-                  <a href="${l.url}" target="_blank">
-                    📱 Open WhatsApp
-                  </a>
-                </div>
-              `
-            )
-            .join("")}
-
-        </body>
-        </html>
-      `);
-
-      popup.document.close();
+    } catch (err) {
+      console.error(err);
     }
-
-    onClose();
   }
 
-  if (!open || !dienst) return null;
+  setSending(false);
+  setMelding(`${verwerkt} aanbieding(en) verzonden.`);
 
-  return (
-    <div className="open-modal-overlay">
-      <div className="open-modal">
-        <h2>📢 Dienst aanbieden</h2>
+  if (onVerzonden) {
+    onVerzonden();
+  }
 
-        <div className="open-info">
-          <p>
-            <strong>Datum:</strong> {dienst.datum}
-          </p>
+  setTimeout(() => {
+    onClose();
+  }, 1000);
+};
+return (
+  <div className="modal-overlay">
+    <div className="aanbied-modal">
 
-          <p>
-            <strong>Dienst:</strong> {dienst.dienst}
-          </p>
+      <div className="modal-header">
+        <h2>Dienst aanbieden</h2>
 
-          <p>
-            <strong>Terminal:</strong> {dienst.terminal}
-          </p>
+        <button
+          className="close-btn"
+          onClick={onClose}
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="dienst-info">
+        <div>
+          <strong>Datum</strong>
+          <span>{dienst.datum}</span>
         </div>
 
-        <div className="open-medewerker-lijst">
-          {medewerkers.map((m) => (
+        <div>
+          <strong>Dienst</strong>
+          <span>{dienst.dienst}</span>
+        </div>
+
+        <div>
+          <strong>Terminal</strong>
+          <span>{dienst.terminal}</span>
+        </div>
+      </div>
+
+      <input
+        className="zoek-input"
+        placeholder="Zoek medewerker..."
+        value={zoekterm}
+        onChange={(e) => setZoekterm(e.target.value)}
+      />
+
+      <div className="toolbar">
+        <button onClick={allesSelecteren}>
+          Alles selecteren
+        </button>
+
+        <button onClick={allesWissen}>
+          Alles wissen
+        </button>
+
+        <span>
+          {geselecteerdeMedewerkers.length} geselecteerd
+        </span>
+      </div>
+
+      {loading ? (
+        <div className="loading">
+          Medewerkers laden...
+        </div>
+      ) : (
+        <div className="medewerker-list">
+
+          {filteredMedewerkers.map((m) => (
             <label
               key={m.id}
-              className="open-checkbox-row"
+              className="medewerker-item"
             >
               <input
                 type="checkbox"
                 checked={geselecteerd.includes(m.id)}
-                onChange={() => toggle(m.id)}
+                onChange={() => toggleMedewerker(m.id)}
               />
 
-              <span>
-                {m.naam}
-                {!m.telefoon && " ⚠️ (geen telefoonnummer)"}
-              </span>
+              <div className="medewerker-info">
+                <strong>{m.naam}</strong>
+
+                <small>{m.functie || "Operator"}</small>
+
+                <small>{m.telefoon}</small>
+              </div>
             </label>
           ))}
-        </div>
 
-        <div className="open-modal-buttons">
-          <button
-            type="button"
-            onClick={onClose}
-          >
-            Annuleren
-          </button>
-
-          <button
-            type="button"
-            className="new-btn"
-            disabled={loading}
-            onClick={versturen}
-          >
-            {loading ? "Versturen..." : "Versturen"}
-          </button>
         </div>
+      )}
+            {sending && (
+        <div className="progress-wrapper">
+          <div
+            className="progress-bar"
+            style={{ width: `${progress}%` }}
+          />
+          <span>{progress}%</span>
+        </div>
+      )}
+
+      {melding && (
+        <div className="success-box">
+          {melding}
+        </div>
+      )}
+
+      {error && (
+        <div className="error-box">
+          {error}
+        </div>
+      )}
+
+      <div className="footer">
+
+        <button
+          className="cancel-btn"
+          onClick={onClose}
+          disabled={sending}
+        >
+          Sluiten
+        </button>
+
+        <button
+          className="send-btn"
+          onClick={versturen}
+          disabled={sending || geselecteerdeMedewerkers.length === 0}
+        >
+          {sending
+            ? "Verzenden..."
+            : `WhatsApp versturen (${geselecteerdeMedewerkers.length})`}
+        </button>
+
       </div>
+
     </div>
-  );
+  </div>
+);
 }

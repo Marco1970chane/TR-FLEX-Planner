@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 
@@ -8,31 +8,46 @@ export default function SetPassword() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
- async function opslaan(e) {
-  e.preventDefault();
+  useEffect(() => {
+    async function checkSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-  if (password.length < 8) {
-    alert("Gebruik minimaal 8 tekens.");
-    return;
+      if (!session) {
+        alert("Geen geldige uitnodiging of sessie gevonden.");
+        navigate("/login");
+      }
+    }
+
+    checkSession();
+  }, [navigate]);
+
+  async function opslaan(e) {
+    e.preventDefault();
+
+    if (password.length < 8) {
+      alert("Gebruik minimaal 8 tekens.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } = await supabase.auth.updateUser({
+      password,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("✅ Je wachtwoord is ingesteld.");
+
+    navigate("/");
   }
-
-  setLoading(true);
-
-  const { error } = await supabase.auth.updateUser({
-    password,
-  });
-
-  setLoading(false);
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  alert("Je wachtwoord is ingesteld.");
-
-  navigate("/");
-}
 
   return (
     <div
