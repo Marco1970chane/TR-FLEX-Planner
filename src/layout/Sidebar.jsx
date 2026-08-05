@@ -7,6 +7,12 @@ export default function Sidebar() {
   const { profile } = useAuthContext();
   const rol = profile?.rol || "medewerker";
 
+const isAdmin = profile?.rol === "admin";
+const isPlanner = profile?.rol === "planner";
+const isOperations = profile?.rol === "operations";
+const isHR = profile?.rol === "hr";
+const isMedewerker = profile?.rol === "medewerker";
+
   return (
     <aside className="sidebar">
       <div>

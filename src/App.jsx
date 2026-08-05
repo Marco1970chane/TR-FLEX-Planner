@@ -25,6 +25,7 @@ import Certificaten from "./pages/Certificaten";
 import Gebruikers from "./pages/Gebruikers";
 import Toolboxen from "./pages/Toolboxen";
 import MijnToolboxen from "./pages/MijnToolboxen";
+import ToolboxVragen from "./pages/ToolboxVragen";
 
 export default function App() {
   return (
@@ -136,6 +137,20 @@ export default function App() {
             </RoleGuard>
           }
         />
+        <Route
+  path="/toolboxvragen"
+  element={
+    <RoleGuard
+      roles={[
+        "admin",
+        "operations",
+        "hr",
+      ]}
+    >
+      <ToolboxVragen />
+    </RoleGuard>
+  }
+/>
 
         {/* Gebruikersbeheer */}
         <Route

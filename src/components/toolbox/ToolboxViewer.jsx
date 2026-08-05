@@ -141,9 +141,7 @@ export default function ToolboxViewer({
             <input
               type="checkbox"
               checked={gelezen}
-              onChange={(e) =>
-                setGelezen(e.target.checked)
-              }
+              onChange={(e) => setGelezen(e.target.checked)}
             />
 
             Ik heb deze toolbox volledig gelezen.
@@ -169,12 +167,8 @@ export default function ToolboxViewer({
               className="new-btn"
               disabled={!gelezen}
               style={{
-                background: gelezen
-                  ? "#2563eb"
-                  : "#94a3b8",
-                cursor: gelezen
-                  ? "pointer"
-                  : "not-allowed",
+                background: gelezen ? "#2563eb" : "#94a3b8",
+                cursor: gelezen ? "pointer" : "not-allowed",
               }}
               onClick={() => {
                 if (onStartQuiz) {

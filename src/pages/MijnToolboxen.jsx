@@ -109,6 +109,11 @@ export default function MijnToolboxen() {
     );
   }
 
+  console.log({
+  viewerOpen,
+  quizOpen,
+  geselecteerdeToolbox,
+});
   return (
     <>
       <div className="table">
@@ -237,14 +242,11 @@ export default function MijnToolboxen() {
           setViewerOpen(false);
           setGeselecteerdeToolbox(null);
         }}
-        onStartQuiz={(toolbox) => {
-          setViewerOpen(false);
-
-          setTimeout(() => {
-            setGeselecteerdeToolbox(toolbox);
-            setQuizOpen(true);
-          }, 150);
-        }}
+       onStartQuiz={(toolbox) => {
+  setGeselecteerdeToolbox(toolbox);
+  setViewerOpen(false);
+  setQuizOpen(true);
+}}
       />
 
       {/* Toolbox Quiz */}
