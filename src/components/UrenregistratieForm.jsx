@@ -3,8 +3,9 @@ import { supabase } from "../services/supabase";
 
 export default function UrenregistratieForm({ onSaved }) {
   const [medewerkers, setMedewerkers] = useState([]);
+  const [terminals, setTerminals] = useState([]);
 
-  const [formulier, setFormulier] = useState({
+  const leegFormulier = {
     datum: new Date().toISOString().split("T")[0],
     medewerker: "",
     terminal: "",
@@ -13,19 +14,56 @@ export default function UrenregistratieForm({ onSaved }) {
     pauze: 30,
     uren: 0,
     status: "Open",
-  });
+  };
+
+  const [formulier, setFormulier] = useState(leegFormulier);
 
   useEffect(() => {
     laadMedewerkers();
+    laadTerminals();
   }, []);
 
   async function laadMedewerkers() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("medewerkers")
-      .select("naam")
+      .select("id, naam")
       .order("naam");
 
-    setMedewerkers(data || []);
+    if (!error) {
+      setMedewerkers(data || []);
+    }
+  }
+
+  async function laadTerminals() {
+    const { data, error } = await supabase
+      .from("terminals")
+      .select("id, naam")
+      .order("naam");
+
+    if (!error) {
+      setTerminals(data || []);
+    }
+  }
+
+  function berekenUren(van, tot, pauze) {
+    if (!van || !tot) return 0;
+
+    const start = new Date(`2000-01-01T${van}`);
+    let einde = new Date(`2000-01-01T${tot}`);
+
+    // Nachtdienst
+    if (einde < start) {
+      einde.setDate(einde.getDate() + 1);
+    }
+
+    let minuten =
+      (einde - start) / 1000 / 60;
+
+    minuten -= Number(pauze);
+
+    if (minuten < 0) minuten = 0;
+
+    return (minuten / 60).toFixed(2);
   }
 
   function wijzig(e) {
@@ -36,34 +74,19 @@ export default function UrenregistratieForm({ onSaved }) {
       [name]: value,
     };
 
-    if (
-      nieuw.begintijd &&
-      nieuw.eindtijd
-    ) {
-      const uren = berekenUren(
+    if (name === "pauze") {
+      nieuw.pauze = Number(value);
+    }
+
+    if (nieuw.begintijd && nieuw.eindtijd) {
+      nieuw.uren = berekenUren(
         nieuw.begintijd,
         nieuw.eindtijd,
-        Number(nieuw.pauze)
+        nieuw.pauze
       );
-
-      nieuw.uren = uren;
     }
 
     setFormulier(nieuw);
-  }
-
-  function berekenUren(van, tot, pauze) {
-    const start = new Date(`2000-01-01T${van}`);
-    const einde = new Date(`2000-01-01T${tot}`);
-
-    let minuten =
-      (einde - start) / 1000 / 60;
-
-    minuten -= pauze;
-
-    if (minuten < 0) minuten = 0;
-
-    return (minuten / 60).toFixed(2);
   }
 
   async function opslaan(e) {
@@ -71,22 +94,24 @@ export default function UrenregistratieForm({ onSaved }) {
 
     const { error } = await supabase
       .from("urenregistratie")
-      .insert([formulier]);
+      .insert([
+        {
+          ...formulier,
+          begintijd: formulier.begintijd || null,
+          eindtijd: formulier.eindtijd || null,
+        },
+      ]);
 
     if (error) {
       alert(error.message);
       return;
     }
 
+    alert("✅ Urenregistratie opgeslagen.");
+
     setFormulier({
+      ...leegFormulier,
       datum: new Date().toISOString().split("T")[0],
-      medewerker: "",
-      terminal: "",
-      begintijd: "",
-      eindtijd: "",
-      pauze: 30,
-      uren: 0,
-      status: "Open",
     });
 
     onSaved?.();
@@ -94,7 +119,7 @@ export default function UrenregistratieForm({ onSaved }) {
 
   return (
     <div className="table">
-      <h2>Nieuwe urenregistratie</h2>
+      <h2>🕒 Nieuwe urenregistratie</h2>
 
       <form onSubmit={opslaan}>
 
@@ -105,6 +130,7 @@ export default function UrenregistratieForm({ onSaved }) {
           name="datum"
           value={formulier.datum}
           onChange={wijzig}
+          required
         />
 
         <label>Medewerker</label>
@@ -121,7 +147,7 @@ export default function UrenregistratieForm({ onSaved }) {
 
           {medewerkers.map((m) => (
             <option
-              key={m.naam}
+              key={m.id}
               value={m.naam}
             >
               {m.naam}
@@ -131,13 +157,25 @@ export default function UrenregistratieForm({ onSaved }) {
 
         <label>Terminal</label>
 
-        <input
-          type="text"
+        <select
           name="terminal"
           value={formulier.terminal}
           onChange={wijzig}
-          placeholder="Terminal"
-        />
+          required
+        >
+          <option value="">
+            Kies terminal
+          </option>
+
+          {terminals.map((t) => (
+            <option
+              key={t.id}
+              value={t.naam}
+            >
+              {t.naam}
+            </option>
+          ))}
+        </select>
 
         <label>Begintijd</label>
 
@@ -164,6 +202,7 @@ export default function UrenregistratieForm({ onSaved }) {
         <input
           type="number"
           name="pauze"
+          min="0"
           value={formulier.pauze}
           onChange={wijzig}
         />
@@ -179,7 +218,7 @@ export default function UrenregistratieForm({ onSaved }) {
           className="new-btn"
           type="submit"
         >
-          Opslaan
+          💾 Opslaan
         </button>
 
       </form>

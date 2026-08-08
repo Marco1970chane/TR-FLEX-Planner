@@ -26,6 +26,7 @@ import Gebruikers from "./pages/Gebruikers";
 import Toolboxen from "./pages/Toolboxen";
 import MijnToolboxen from "./pages/MijnToolboxen";
 import ToolboxVragen from "./pages/ToolboxVragen";
+import ImportExport from "./pages/ImportExport";
 
 export default function App() {
   return (
@@ -192,6 +193,20 @@ export default function App() {
             </RoleGuard>
           }
         />
+        <Route
+  path="/import-export"
+  element={
+    <RoleGuard
+      roles={[
+        "admin",
+        "operations",
+        "planner",
+      ]}
+    >
+      <ImportExport />
+    </RoleGuard>
+  }
+/>
 
         {/* Open diensten */}
         <Route

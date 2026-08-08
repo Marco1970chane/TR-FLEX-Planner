@@ -95,8 +95,8 @@ export default function PlanningForm({
       medewerker: openDienst ? null : medewerker,
       medewerker_id: openDienst ? null : medewerkerId,
 
-      starttijd,
-      eindtijd,
+      starttijd: starttijd || null,
+      eindtijd: eindtijd || null,
 
       status: openDienst ? "Open" : "Ingepland",
     };
@@ -163,7 +163,18 @@ export default function PlanningForm({
 
       <select
         value={dienst}
-        onChange={(e) => setDienst(e.target.value)}
+        onChange={(e) => {
+          const waarde = e.target.value;
+
+          setDienst(waarde);
+
+          if (waarde.includes("-")) {
+            const [start, eind] = waarde.split("-");
+
+            setStarttijd(start);
+            setEindtijd(eind);
+          }
+        }}
       >
         <option value="">Kies een standaarddienst...</option>
         <option value="06:00-14:00">06:00-14:00</option>

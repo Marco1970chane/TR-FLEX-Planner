@@ -1,211 +1,211 @@
-import { Fragment, useMemo, useState } from "react";
-import "./WeekPlanner.css";
-import PlanningCard from "./PlanningCard";
+import {
+  addDays,
+  format,
+  startOfWeek,
+} from "date-fns";
+import { nl } from "date-fns/locale";
 
-const dagen = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
-
-function beginVanWeek(datum = new Date()) {
-  const d = new Date(datum);
-  const dag = d.getDay();
-  const verschil = dag === 0 ? -6 : 1 - dag;
-
-  d.setDate(d.getDate() + verschil);
-  d.setHours(0, 0, 0, 0);
-
-  return d;
-}
-
-function formatDatum(d) {
-  return d.toISOString().split("T")[0];
-}
-
-function getWeekNumber(date) {
-  const d = new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-  );
-
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
+import DienstCard from "./DienstCard";
 
 export default function WeekPlanner({
-  planning,
-  onNieuweDienst,
-  onEditDienst,
+  planning = [],
+  currentWeek,
+  onEdit,
 }) {
-  const [weekStart, setWeekStart] = useState(beginVanWeek());
+  const weekStart = startOfWeek(
+    currentWeek || new Date(),
+    {
+      weekStartsOn: 1,
+    }
+  );
 
-  const vandaagKey = formatDatum(new Date());
+  const dagen = Array.from({ length: 7 }, (_, i) =>
+    addDays(weekStart, i)
+  );
 
-  const weekDagen = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const datum = new Date(weekStart);
-      datum.setDate(weekStart.getDate() + i);
+  // Alleen diensten van de geselecteerde week
+  const planningWeek = planning.filter((p) =>
+    dagen.some(
+      (dag) =>
+        p.datum === format(dag, "yyyy-MM-dd")
+    )
+  );
 
-      return {
-        label: dagen[i],
-        datum,
-        key: formatDatum(datum),
-      };
-    });
-  }, [weekStart]);
+  // Unieke medewerkers
+  const medewerkers = [
+    ...new Set(
+      planningWeek.map(
+        (p) => p.medewerker || "Open dienst"
+      )
+    ),
+  ];
 
-  const medewerkers = useMemo(() => {
-    return [...new Set(planning.map((p) => p.medewerker))]
-      .filter(Boolean)
-      .sort();
-  }, [planning]);
+  function dienstOpDag(medewerker, dag) {
+    return planningWeek.find(
+      (p) =>
+        (p.medewerker || "Open dienst") === medewerker &&
+        p.datum === format(dag, "yyyy-MM-dd")
+    );
+  }
 
-  const planningMap = useMemo(() => {
-    const map = {};
+  function berekenUren(diensten) {
+    return diensten.reduce((totaal, d) => {
+      if (!d.starttijd || !d.eindtijd) return totaal;
 
-    planning.forEach((dienst) => {
-      const key = `${dienst.medewerker}-${dienst.datum}`;
+      const [sh, sm] = d.starttijd.split(":").map(Number);
+      const [eh, em] = d.eindtijd.split(":").map(Number);
 
-      if (!map[key]) {
-        map[key] = [];
+      let minuten =
+        eh * 60 +
+        em -
+        (sh * 60 + sm);
+
+      if (minuten < 0) {
+        minuten += 24 * 60;
       }
 
-      map[key].push(dienst);
-    });
-
-    return map;
-  }, [planning]);
-
-  const weekNummer = getWeekNumber(weekStart);
-
-  function vorigeWeek() {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() - 7);
-    setWeekStart(d);
-  }
-
-  function volgendeWeek() {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + 7);
-    setWeekStart(d);
-  }
-
-  function vandaag() {
-    setWeekStart(beginVanWeek());
+      return totaal + minuten / 60;
+    }, 0);
   }
 
   return (
-    <div className="weekplanner">
+    <div
+      style={{
+        overflowX: "auto",
+      }}
+    >
+      <table
+        style={{
+          width: "100%",
+          minWidth: "1200px",
+          borderCollapse: "collapse",
+        }}
+      >
+        <thead>
+          <tr>
+            <th
+              style={{
+                background: "#15803d",
+                color: "#fff",
+                padding: "15px",
+                width: "220px",
+              }}
+            >
+              Medewerker
+            </th>
 
-      <div className="planner-header">
+            {dagen.map((dag) => (
+              <th
+                key={dag.toISOString()}
+                style={{
+                  background: "#16a34a",
+                  color: "#fff",
+                  padding: "15px",
+                  textAlign: "center",
+                }}
+              >
+                {format(dag, "EEE d", {
+                  locale: nl,
+                })}
+              </th>
+            ))}
 
-        <button className="new-btn" onClick={vorigeWeek}>
-          ◀ Vorige
-        </button>
+            <th
+              style={{
+                background: "#15803d",
+                color: "#fff",
+                width: "90px",
+              }}
+            >
+              Uren
+            </th>
+          </tr>
+        </thead>
 
-        <button className="new-btn" onClick={vandaag}>
-          Vandaag
-        </button>
+        <tbody>
+          {medewerkers.map((medewerker) => {
+            const diensten =
+              planningWeek.filter(
+                (p) =>
+                  (p.medewerker ||
+                    "Open dienst") === medewerker
+              );
 
-        <h3>
-          📅 Week {weekNummer} ·{" "}
-          {weekDagen[0].datum.toLocaleDateString("nl-NL", {
-            day: "numeric",
-            month: "long",
+            return (
+              <tr key={medewerker}>
+                <td
+                  style={{
+                    padding: "15px",
+                    fontWeight: "600",
+                    background: "#f0fdf4",
+                    border: "1px solid #dcfce7",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  👤 {medewerker}
+                </td>
+
+                {dagen.map((dag) => {
+                  const dienst =
+                    dienstOpDag(
+                      medewerker,
+                      dag
+                    );
+
+                  return (
+                    <td
+                      key={dag.toISOString()}
+                      style={{
+                        border:
+                          "1px solid #ecfdf5",
+                        height: "95px",
+                        padding: "6px",
+                        verticalAlign: "top",
+                      }}
+                    >
+                      {dienst && (
+                        <DienstCard
+                          dienst={dienst}
+                          onClick={onEdit}
+                        />
+                      )}
+                    </td>
+                  );
+                })}
+
+                <td
+                  style={{
+                    textAlign: "center",
+                    fontWeight: "700",
+                    color: "#15803d",
+                    border:
+                      "1px solid #dcfce7",
+                  }}
+                >
+                  {berekenUren(
+                    diensten
+                  ).toFixed(1)}
+                </td>
+              </tr>
+            );
           })}
-          {" - "}
-          {weekDagen[6].datum.toLocaleDateString("nl-NL", {
-            day: "numeric",
-            month: "long",
-          })}
-        </h3>
 
-        <button className="new-btn" onClick={volgendeWeek}>
-          Volgende ▶
-        </button>
-
-      </div>
-
-      <div className="planner-grid">
-
-        <div className="corner"></div>
-
-        {weekDagen.map((dag) => (
-          <div
-            key={dag.key}
-            className={`day-header ${
-              dag.key === vandaagKey ? "today" : ""
-            }`}
-          >
-            <strong>{dag.label}</strong>
-
-            <br />
-
-            {dag.datum.toLocaleDateString("nl-NL", {
-              day: "2-digit",
-              month: "2-digit",
-            })}
-          </div>
-        ))}
-
-        {medewerkers.map((medewerker) => {
-
-          const totaal = planning.filter(
-            (p) => p.medewerker === medewerker
-          ).length;
-
-          return (
-            <Fragment key={medewerker}>
-
-              <div className="employee">
-
-                <span>{medewerker}</span>
-
-                <span className="dienst-count">
-                  {totaal}
-                </span>
-
-              </div>
-
-              {weekDagen.map((dag) => {
-
-                const diensten =
-                  planningMap[
-                    `${medewerker}-${dag.key}`
-                  ] || [];
-
-                return (
-                  <div
-                    key={`${medewerker}-${dag.key}`}
-                    className="planner-cell"
-                    onClick={() => {
-                      if (diensten.length === 0) {
-                        onNieuweDienst?.(
-                          dag.key,
-                          medewerker
-                        );
-                      }
-                    }}
-                  >
-                    {diensten.map((dienst) => (
-                      <PlanningCard
-                        key={dienst.id}
-                        dienst={dienst}
-                        onClick={() =>
-                          onEditDienst?.(dienst)
-                        }
-                      />
-                    ))}
-                  </div>
-                );
-              })}
-
-            </Fragment>
-          );
-        })}
-
-      </div>
-
+          {medewerkers.length === 0 && (
+            <tr>
+              <td
+                colSpan={9}
+                style={{
+                  padding: "40px",
+                  textAlign: "center",
+                  color: "#64748b",
+                }}
+              >
+                Geen diensten gevonden voor deze week.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

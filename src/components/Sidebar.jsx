@@ -142,6 +142,18 @@ export default function Sidebar() {
             </NavLink>
           )}
 
+          {/* Import / Export */}
+          {(isAdmin || isPlanner || isOperations) && (
+            <NavLink
+              to="/import-export"
+              className={({ isActive }) =>
+                isActive ? "menu-item active" : "menu-item"
+              }
+            >
+              📥 Import / Export
+            </NavLink>
+          )}
+
           {/* Open diensten */}
           <NavLink
             to="/opendiensten"
