@@ -1,3 +1,5 @@
+// src/pages/Planning.jsx
+
 import { useEffect, useState } from "react";
 import { addWeeks } from "date-fns";
 
@@ -17,20 +19,33 @@ import PlanningForm from "../components/PlanningForm";
 export default function Planning() {
   const { profile } = useAuthContext();
 
+  // ==========================================
+  // RECHTEN
+  // ==========================================
+
   const magBeheren = [
     "admin",
     "planner",
     "operations",
   ].includes(profile?.rol);
 
-  const [planning, setPlanning] = useState([]);
+  // ==========================================
+  // STATE
+  // ==========================================
 
-  const [toonForm, setToonForm] = useState(false);
+  const [planning, setPlanning] =
+    useState([]);
 
-  const [geselecteerdePlanning, setGeselecteerdePlanning] =
-    useState(null);
+  const [toonForm, setToonForm] =
+    useState(false);
 
-  const [zoekterm, setZoekterm] = useState("");
+  const [
+    geselecteerdePlanning,
+    setGeselecteerdePlanning,
+  ] = useState(null);
+
+  const [zoekterm, setZoekterm] =
+    useState("");
 
   const [weergave, setWeergave] =
     useState("week");
@@ -40,9 +55,17 @@ export default function Planning() {
 
   const [isMobiel, setIsMobiel] =
     useState(
-      window.matchMedia("(max-width:900px)")
+      window
+        .matchMedia("(max-width:900px)")
         .matches
     );
+
+  const [laden, setLaden] =
+    useState(true);
+
+  // ==========================================
+  // PLANNING LADEN
+  // ==========================================
 
   useEffect(() => {
     if (profile) {
@@ -50,9 +73,53 @@ export default function Planning() {
     }
   }, [profile]);
 
+  async function laadPlanning() {
+    setLaden(true);
+
+    let query = supabase
+      .from("planning")
+      .select("*")
+      .order("datum", {
+        ascending: true,
+      });
+
+    // Medewerker ziet alleen eigen planning
+    if (profile?.rol === "medewerker") {
+      query = query.eq(
+        "medewerker",
+        profile.naam
+      );
+    }
+
+    const {
+      data,
+      error,
+    } = await query;
+
+    if (error) {
+      console.error(
+        "Fout bij laden planning:",
+        error
+      );
+
+      alert(error.message);
+      setLaden(false);
+      return;
+    }
+
+    setPlanning(data || []);
+    setLaden(false);
+  }
+
+  // ==========================================
+  // MOBIELE WEERGAVE
+  // ==========================================
+
   useEffect(() => {
     const media =
-      window.matchMedia("(max-width:900px)");
+      window.matchMedia(
+        "(max-width:900px)"
+      );
 
     function handleChange(e) {
       setIsMobiel(e.matches);
@@ -63,117 +130,227 @@ export default function Planning() {
       handleChange
     );
 
-    return () =>
+    return () => {
       media.removeEventListener(
         "change",
         handleChange
       );
+    };
   }, []);
 
-  async function laadPlanning() {
-    let query = supabase
-      .from("planning")
-      .select("*")
-      .order("datum");
-
-    if (profile?.rol === "medewerker") {
-      query = query.eq(
-        "medewerker",
-        profile.naam
-      );
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setPlanning(data || []);
-  }
+  // ==========================================
+  // DIENST VERWIJDEREN
+  // ==========================================
 
   async function verwijderPlanning(id) {
-    if (
-      !window.confirm(
-        "Weet je zeker dat je deze dienst wilt verwijderen?"
-      )
-    ) {
+    if (!magBeheren) {
+      alert(
+        "Je hebt geen rechten om diensten te verwijderen."
+      );
       return;
     }
 
-    const { error } = await supabase
+    if (!id) {
+      return;
+    }
+
+    const akkoord =
+      window.confirm(
+        "Weet je zeker dat je deze dienst wilt verwijderen?"
+      );
+
+    if (!akkoord) {
+      return;
+    }
+
+    const {
+      error,
+    } = await supabase
       .from("planning")
       .delete()
       .eq("id", id);
 
     if (error) {
+      console.error(
+        "Fout bij verwijderen planning:",
+        error
+      );
+
       alert(error.message);
       return;
     }
 
-    laadPlanning();
+    alert(
+      "🗑️ Dienst verwijderd."
+    );
+
+    await laadPlanning();
   }
 
+  // ==========================================
+  // PLANNING BEWERKEN
+  // ==========================================
+
   function openPlanning(item) {
+    if (!magBeheren) {
+      return;
+    }
+
     setGeselecteerdePlanning(item);
     setToonForm(true);
   }
 
+  // ==========================================
+  // NIEUWE DIENST
+  // ==========================================
+
+  function openNieuweDienst() {
+    if (!magBeheren) {
+      alert(
+        "Je hebt geen rechten om diensten toe te voegen."
+      );
+      return;
+    }
+
+    setGeselecteerdePlanning(null);
+    setToonForm(true);
+  }
+
+  // ==========================================
+  // FILTER
+  // ==========================================
+
   const gefilterdePlanning =
     planning.filter((p) => {
       const zoek =
-        zoekterm.toLowerCase();
+        zoekterm
+          .toLowerCase()
+          .trim();
+
+      if (!zoek) {
+        return true;
+      }
+
+      const medewerker =
+        (
+          p.medewerker ||
+          "Open dienst"
+        )
+          .toLowerCase();
+
+      const terminal =
+        (
+          p.terminal || ""
+        ).toLowerCase();
+
+      const status =
+        (
+          p.status || ""
+        ).toLowerCase();
+
+      const dienst =
+        (
+          p.dienst || ""
+        ).toLowerCase();
+
+      const datum =
+        (
+          p.datum || ""
+        ).toLowerCase();
 
       return (
-        (p.medewerker || "Open dienst")
-          .toLowerCase()
-          .includes(zoek) ||
-        (p.terminal || "")
-          .toLowerCase()
-          .includes(zoek) ||
-        (p.status || "")
-          .toLowerCase()
-          .includes(zoek)
+        medewerker.includes(
+          zoek
+        ) ||
+        terminal.includes(
+          zoek
+        ) ||
+        status.includes(
+          zoek
+        ) ||
+        dienst.includes(
+          zoek
+        ) ||
+        datum.includes(
+          zoek
+        )
       );
     });
-      return (
+
+  // ==========================================
+  // RENDER
+  // ==========================================
+
+  return (
     <>
       <div
         style={{
           background: "#f8fafc",
           minHeight: "100vh",
           padding: "25px",
+          boxSizing: "border-box",
         }}
       >
+        {/* ====================================
+            HEADER
+        ===================================== */}
+
         <PlanningHeader
           currentWeek={currentWeek}
           onPreviousWeek={() =>
-            setCurrentWeek(addWeeks(currentWeek, -1))
+            setCurrentWeek(
+              addWeeks(
+                currentWeek,
+                -1
+              )
+            )
           }
           onNextWeek={() =>
-            setCurrentWeek(addWeeks(currentWeek, 1))
+            setCurrentWeek(
+              addWeeks(
+                currentWeek,
+                1
+              )
+            )
           }
           onToday={() =>
-            setCurrentWeek(new Date())
+            setCurrentWeek(
+              new Date()
+            )
           }
-          onNieuweDienst={() => {
-            setGeselecteerdePlanning(null);
-            setToonForm(true);
-          }}
+          onNieuweDienst={
+            openNieuweDienst
+          }
         />
+
+        {/* ====================================
+            FILTER
+        ===================================== */}
 
         <WeekFilters
           zoekterm={zoekterm}
-          setZoekterm={setZoekterm}
+          setZoekterm={
+            setZoekterm
+          }
         />
 
-        <PlanningStats planning={planning} />
+        {/* ====================================
+            STATISTIEKEN
+        ===================================== */}
+
+        <PlanningStats
+          planning={planning}
+        />
+
+        {/* ====================================
+            WEERGAVE KEUZE
+        ===================================== */}
 
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
+            justifyContent:
+              "space-between",
             alignItems: "center",
             marginTop: "25px",
             marginBottom: "20px",
@@ -185,33 +362,42 @@ export default function Planning() {
             style={{
               display: "flex",
               gap: "10px",
+              flexWrap: "wrap",
             }}
           >
             <button
+              type="button"
               className="new-btn"
               style={{
                 background:
-                  weergave === "lijst"
+                  weergave ===
+                  "lijst"
                     ? "#15803d"
                     : "#22c55e",
               }}
               onClick={() =>
-                setWeergave("lijst")
+                setWeergave(
+                  "lijst"
+                )
               }
             >
               📋 Lijst
             </button>
 
             <button
+              type="button"
               className="new-btn"
               style={{
                 background:
-                  weergave === "week"
+                  weergave ===
+                  "week"
                     ? "#15803d"
                     : "#22c55e",
               }}
               onClick={() =>
-                setWeergave("week")
+                setWeergave(
+                  "week"
+                )
               }
             >
               📅 Planner
@@ -225,9 +411,14 @@ export default function Planning() {
               fontSize: "15px",
             }}
           >
-            {planning.length} diensten gevonden
+            {gefilterdePlanning.length}{" "}
+            diensten gevonden
           </div>
         </div>
+
+        {/* ====================================
+            PLANNING
+        ===================================== */}
 
         <div
           style={{
@@ -240,66 +431,159 @@ export default function Planning() {
               "1px solid #dcfce7",
           }}
         >
-          {weergave === "lijst" ? (
-            <PlanningTable
-              planning={gefilterdePlanning}
-              onEdit={openPlanning}
-              onDelete={verwijderPlanning}
-            />
-          ) : isMobiel ? (
-            <DagPlanner
-              planning={planning}
-              onEdit={openPlanning}
-            />
+          {laden ? (
+            <div
+              style={{
+                padding: "50px",
+                textAlign:
+                  "center",
+                color:
+                  "#64748b",
+              }}
+            >
+              ⏳ Planning laden...
+            </div>
           ) : (
-            <WeekPlanner
-  planning={planning}
-  currentWeek={currentWeek}
-  onEdit={openPlanning}
-/>
+            <>
+              {weergave ===
+              "lijst" ? (
+                <PlanningTable
+                  planning={
+                    gefilterdePlanning
+                  }
+                  onEdit={
+                    magBeheren
+                      ? openPlanning
+                      : undefined
+                  }
+                  onDelete={
+                    magBeheren
+                      ? verwijderPlanning
+                      : undefined
+                  }
+                />
+              ) : isMobiel ? (
+                <DagPlanner
+                  planning={
+                    gefilterdePlanning
+                  }
+                  onEdit={
+                    magBeheren
+                      ? openPlanning
+                      : undefined
+                  }
+                />
+              ) : (
+                <WeekPlanner
+                  planning={
+                    gefilterdePlanning
+                  }
+                  currentWeek={
+                    currentWeek
+                  }
+                  onEdit={
+                    magBeheren
+                      ? openPlanning
+                      : undefined
+                  }
+                />
+              )}
+            </>
           )}
         </div>
       </div>
-            {magBeheren && toonForm && (
-        <div className="modal">
+
+      {/* ====================================
+          NIEUW / BEWERKEN MODAL
+      ===================================== */}
+
+      {magBeheren &&
+        toonForm && (
           <div
-            className="modal-content"
             style={{
-              maxWidth: "700px",
+              position: "fixed",
+              inset: 0,
+              background:
+                "rgba(15,23,42,.55)",
+              display: "flex",
+              alignItems:
+                "center",
+              justifyContent:
+                "center",
+              padding: "20px",
+              zIndex: 1000,
             }}
           >
-            <PlanningForm
-              planning={geselecteerdePlanning}
-              defaultDatum={
-                geselecteerdePlanning?.datum || ""
-              }
-              defaultMedewerker={
-                geselecteerdePlanning?.medewerker || ""
-              }
-              onSaved={() => {
-                laadPlanning();
-                setToonForm(false);
-                setGeselecteerdePlanning(null);
-              }}
-            />
-
-            <button
-              className="new-btn"
+            <div
               style={{
-                marginTop: "20px",
                 width: "100%",
-                background: "#16a34a",
-              }}
-              onClick={() => {
-                setToonForm(false);
-                setGeselecteerdePlanning(null);
+                maxWidth: "700px",
+                maxHeight: "90vh",
+                overflowY:
+                  "auto",
+                background:
+                  "#ffffff",
+                borderRadius:
+                  "18px",
+                padding:
+                  "25px",
+                boxSizing:
+                  "border-box",
+                boxShadow:
+                  "0 20px 50px rgba(0,0,0,.25)",
               }}
             >
-              Sluiten
-            </button>
+              <PlanningForm
+                planning={
+                  geselecteerdePlanning
+                }
+                defaultDatum={
+                  geselecteerdePlanning?.datum ||
+                  ""
+                }
+                defaultMedewerker={
+                  geselecteerdePlanning?.medewerker ||
+                  ""
+                }
+                onSaved={() => {
+                  laadPlanning();
+
+                  setToonForm(
+                    false
+                  );
+
+                  setGeselecteerdePlanning(
+                    null
+                  );
+                }}
+              />
+
+              <button
+                type="button"
+                className="new-btn"
+                style={{
+                  marginTop:
+                    "20px",
+                  width:
+                    "100%",
+                  background:
+                    "#64748b",
+                }}
+                onClick={() => {
+                  setToonForm(
+                    false
+                  );
+
+                  setGeselecteerdePlanning(
+                    null
+                  );
+                }}
+              >
+                Sluiten
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </>
   );
 }

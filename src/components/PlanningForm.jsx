@@ -16,27 +16,39 @@ export default function PlanningForm({
   const [terminalId, setTerminalId] = useState(null);
 
   const [medewerker, setMedewerker] = useState("");
-  const [medewerkerId, setMedewerkerId] = useState(null);
+  const [medewerkerId, setMedewerkerId] =
+    useState(null);
 
   const [starttijd, setStarttijd] = useState("");
   const [eindtijd, setEindtijd] = useState("");
 
-  const [openDienst, setOpenDienst] = useState(false);
+  const [openDienst, setOpenDienst] =
+    useState(false);
 
-  const [medewerkers, setMedewerkers] = useState([]);
-  const [terminals, setTerminals] = useState([]);
+  const [medewerkers, setMedewerkers] =
+    useState([]);
+
+  const [terminals, setTerminals] =
+    useState([]);
 
   // ==========================================
   // CERTIFICATEN
   // ==========================================
 
-  const [vereisteCertificaten, setVereisteCertificaten] =
-    useState([]);
+  const [
+    vereisteCertificaten,
+    setVereisteCertificaten,
+  ] = useState([]);
 
-  const [certificaatControle, setCertificaatControle] =
-    useState(null);
+  const [
+    certificaatControle,
+    setCertificaatControle,
+  ] = useState(null);
 
   const [controleBezig, setControleBezig] =
+    useState(false);
+
+  const [opslaanBezig, setOpslaanBezig] =
     useState(false);
 
   // ==========================================
@@ -57,12 +69,20 @@ export default function PlanningForm({
       setDatum(defaultDatum || "");
 
       if (defaultMedewerker) {
-        const gevonden = medewerkers.find(
-          (m) => m.naam === defaultMedewerker
+        const gevonden =
+          medewerkers.find(
+            (m) =>
+              m.naam ===
+              defaultMedewerker
+          );
+
+        setMedewerker(
+          defaultMedewerker
         );
 
-        setMedewerker(defaultMedewerker);
-        setMedewerkerId(gevonden?.id ?? null);
+        setMedewerkerId(
+          gevonden?.id ?? null
+        );
       }
     }
   }, [
@@ -78,19 +98,41 @@ export default function PlanningForm({
 
   useEffect(() => {
     if (planning?.id) {
-      setDatum(planning.datum || "");
-      setDienst(planning.dienst || "");
+      setDatum(
+        planning.datum || ""
+      );
 
-      setTerminal(planning.terminal || "");
-      setTerminalId(planning.terminal_id || null);
+      setDienst(
+        planning.dienst || ""
+      );
 
-      setMedewerker(planning.medewerker || "");
-      setMedewerkerId(planning.medewerker_id || null);
+      setTerminal(
+        planning.terminal || ""
+      );
 
-      setStarttijd(planning.starttijd || "");
-      setEindtijd(planning.eindtijd || "");
+      setTerminalId(
+        planning.terminal_id || null
+      );
 
-      setOpenDienst(planning.status === "Open");
+      setMedewerker(
+        planning.medewerker || ""
+      );
+
+      setMedewerkerId(
+        planning.medewerker_id || null
+      );
+
+      setStarttijd(
+        planning.starttijd || ""
+      );
+
+      setEindtijd(
+        planning.eindtijd || ""
+      );
+
+      setOpenDienst(
+        planning.status === "Open"
+      );
     }
   }, [planning]);
 
@@ -105,7 +147,9 @@ export default function PlanningForm({
       return;
     }
 
-    laadVereisteCertificaten(terminalId);
+    laadVereisteCertificaten(
+      terminalId
+    );
   }, [terminalId]);
 
   // ==========================================
@@ -136,7 +180,10 @@ export default function PlanningForm({
   // ==========================================
 
   async function laadMedewerkers() {
-    const { data, error } = await supabase
+    const {
+      data,
+      error,
+    } = await supabase
       .from("medewerkers")
       .select("*")
       .order("naam");
@@ -157,7 +204,10 @@ export default function PlanningForm({
   // ==========================================
 
   async function laadTerminals() {
-    const { data, error } = await supabase
+    const {
+      data,
+      error,
+    } = await supabase
       .from("terminals")
       .select("*")
       .order("naam");
@@ -174,11 +224,16 @@ export default function PlanningForm({
   }
 
   // ==========================================
-  // VEREISTE CERTIFICATEN
+  // VEREISTE CERTIFICATEN LADEN
   // ==========================================
 
-  async function laadVereisteCertificaten(id) {
-    const { data, error } = await supabase
+  async function laadVereisteCertificaten(
+    id
+  ) {
+    const {
+      data,
+      error,
+    } = await supabase
       .from("terminal_certificaten")
       .select("*")
       .eq("terminal_id", id)
@@ -195,7 +250,9 @@ export default function PlanningForm({
       return;
     }
 
-    setVereisteCertificaten(data || []);
+    setVereisteCertificaten(
+      data || []
+    );
   }
 
   // ==========================================
@@ -207,160 +264,205 @@ export default function PlanningForm({
     gekozenTerminalId
   ) {
     setControleBezig(true);
+    setCertificaatControle(null);
 
-    const {
-      data: vereistData,
-      error: vereistError,
-    } = await supabase
-      .from("terminal_certificaten")
-      .select("*")
-      .eq("terminal_id", gekozenTerminalId)
-      .eq("verplicht", true)
-      .order("certificaat");
+    try {
+      // ----------------------------------------
+      // VEREISTE CERTIFICATEN
+      // ----------------------------------------
 
-    if (vereistError) {
-      console.error(
-        "Fout bij vereiste certificaten:",
-        vereistError
+      const {
+        data: vereistData,
+        error: vereistError,
+      } = await supabase
+        .from("terminal_certificaten")
+        .select("*")
+        .eq(
+          "terminal_id",
+          gekozenTerminalId
+        )
+        .eq("verplicht", true)
+        .order("certificaat");
+
+      if (vereistError) {
+        throw vereistError;
+      }
+
+      const vereist =
+        vereistData || [];
+
+      setVereisteCertificaten(
+        vereist
       );
 
-      setCertificaatControle({
-        status: "fout",
-        ontbrekend: [],
-        verlopen: [],
-        bijnaVerlopen: [],
-      });
+      // ----------------------------------------
+      // GEEN EISEN
+      // ----------------------------------------
 
-      setControleBezig(false);
-      return;
-    }
+      if (vereist.length === 0) {
+        setCertificaatControle({
+          status: "geen_eisen",
+          ontbrekend: [],
+          verlopen: [],
+          bijnaVerlopen: [],
+        });
 
-    const vereist = vereistData || [];
+        return;
+      }
 
-    setVereisteCertificaten(vereist);
+      // ----------------------------------------
+      // CERTIFICATEN MEDEWERKER
+      // ----------------------------------------
 
-    // Geen certificaten vereist
-    if (vereist.length === 0) {
-      setCertificaatControle({
-        status: "geen_eisen",
-        ontbrekend: [],
-        verlopen: [],
-        bijnaVerlopen: [],
-      });
+      const {
+        data: medewerkerData,
+        error: medewerkerError,
+      } = await supabase
+        .from("certificaten")
+        .select("*")
+        .eq(
+          "medewerker_id",
+          medewerkerId
+        );
 
-      setControleBezig(false);
-      return;
-    }
+      if (medewerkerError) {
+        throw medewerkerError;
+      }
 
-    // Certificaten van medewerker
-    const {
-      data: medewerkerData,
-      error: medewerkerError,
-    } = await supabase
-      .from("certificaten")
-      .select("*")
-      .eq("medewerker_id", medewerkerId);
+      const medewerkerCertificaten =
+        medewerkerData || [];
 
-    if (medewerkerError) {
-      console.error(
-        "Fout bij medewerker certificaten:",
-        medewerkerError
+      const vandaag =
+        new Date();
+
+      vandaag.setHours(
+        0,
+        0,
+        0,
+        0
       );
 
-      setCertificaatControle({
-        status: "fout",
-        ontbrekend: [],
-        verlopen: [],
-        bijnaVerlopen: [],
-      });
+      const ontbrekend = [];
+      const verlopen = [];
+      const bijnaVerlopen = [];
 
-      setControleBezig(false);
-      return;
-    }
+      // ----------------------------------------
+      // ELK CERTIFICAAT CONTROLEREN
+      // ----------------------------------------
 
-    const medewerkerCertificaten =
-      medewerkerData || [];
+      vereist.forEach(
+        (verplichtCertificaat) => {
+          const naam =
+            verplichtCertificaat.certificaat
+              ?.trim()
+              .toLowerCase();
 
-    const vandaag = new Date();
+          const gevonden =
+            medewerkerCertificaten.find(
+              (certificaat) => {
+                const certificaatNaam =
+                  certificaat.certificaat
+                    ?.trim()
+                    .toLowerCase();
 
-    vandaag.setHours(0, 0, 0, 0);
+                return (
+                  certificaatNaam ===
+                  naam
+                );
+              }
+            );
 
-    const ontbrekend = [];
-    const verlopen = [];
-    const bijnaVerlopen = [];
-
-    // Elk vereist certificaat controleren
-    vereist.forEach((verplichtCertificaat) => {
-      const naam =
-        verplichtCertificaat.certificaat
-          ?.trim()
-          .toLowerCase();
-
-      const gevonden =
-        medewerkerCertificaten.find(
-          (certificaat) => {
-            const certificaatNaam =
-              certificaat.certificaat
-                ?.trim()
-                .toLowerCase();
-
-            return certificaatNaam === naam;
+          // Ontbreekt
+          if (!gevonden) {
+            ontbrekend.push(
+              verplichtCertificaat
+            );
+            return;
           }
-        );
 
-      // Niet aanwezig
-      if (!gevonden) {
-        ontbrekend.push(
-          verplichtCertificaat
-        );
-        return;
-      }
+          // Geen geldigheidsdatum
+          if (
+            !gevonden.geldig_tot
+          ) {
+            verlopen.push(
+              gevonden
+            );
+            return;
+          }
 
-      // Geen geldigheidsdatum
-      if (!gevonden.geldig_tot) {
-        verlopen.push(gevonden);
-        return;
-      }
+          const geldigTot =
+            new Date(
+              `${gevonden.geldig_tot}T00:00:00`
+            );
 
-      const geldigTot = new Date(
-        `${gevonden.geldig_tot}T00:00:00`
+          const dagen =
+            Math.ceil(
+              (geldigTot -
+                vandaag) /
+                (1000 *
+                  60 *
+                  60 *
+                  24)
+            );
+
+          // Verlopen
+          if (dagen < 0) {
+            verlopen.push(
+              gevonden
+            );
+            return;
+          }
+
+          // Binnen 30 dagen
+          if (dagen <= 30) {
+            bijnaVerlopen.push(
+              gevonden
+            );
+          }
+        }
       );
 
-      const dagen = Math.ceil(
-        (geldigTot - vandaag) /
-          (1000 * 60 * 60 * 24)
+      // ----------------------------------------
+      // STATUS
+      // ----------------------------------------
+
+      let status = "geldig";
+
+      if (
+        ontbrekend.length > 0
+      ) {
+        status = "ontbrekend";
+      } else if (
+        verlopen.length > 0
+      ) {
+        status = "verlopen";
+      } else if (
+        bijnaVerlopen.length > 0
+      ) {
+        status = "bijna";
+      }
+
+      setCertificaatControle({
+        status,
+        ontbrekend,
+        verlopen,
+        bijnaVerlopen,
+      });
+    } catch (error) {
+      console.error(
+        "Fout bij certificaatcontrole:",
+        error
       );
 
-      // Verlopen
-      if (dagen < 0) {
-        verlopen.push(gevonden);
-        return;
-      }
-
-      // Binnen 30 dagen verlopen
-      if (dagen <= 30) {
-        bijnaVerlopen.push(gevonden);
-      }
-    });
-
-    let status = "geldig";
-
-    if (ontbrekend.length > 0) {
-      status = "ontbrekend";
-    } else if (verlopen.length > 0) {
-      status = "verlopen";
-    } else if (bijnaVerlopen.length > 0) {
-      status = "bijna";
+      setCertificaatControle({
+        status: "fout",
+        ontbrekend: [],
+        verlopen: [],
+        bijnaVerlopen: [],
+      });
+    } finally {
+      setControleBezig(false);
     }
-
-    setCertificaatControle({
-      status,
-      ontbrekend,
-      verlopen,
-      bijnaVerlopen,
-    });
-
-    setControleBezig(false);
   }
 
   // ==========================================
@@ -370,16 +472,84 @@ export default function PlanningForm({
   async function opslaan(e) {
     e.preventDefault();
 
+    if (opslaanBezig) {
+      return;
+    }
+
+    // ----------------------------------------
+    // DATUM
+    // ----------------------------------------
+
+    if (!datum) {
+      alert(
+        "Selecteer een datum."
+      );
+      return;
+    }
+
+    // ----------------------------------------
+    // TERMINAL
+    // ----------------------------------------
+
+    if (!terminalId) {
+      alert(
+        "Selecteer eerst een terminal."
+      );
+      return;
+    }
+
+    // ----------------------------------------
+    // MEDEWERKER
+    // ----------------------------------------
+
+    if (!openDienst && !medewerkerId) {
+      alert(
+        "Selecteer eerst een medewerker."
+      );
+      return;
+    }
+
+    // ----------------------------------------
+    // TIJDEN
+    // ----------------------------------------
+
+    if (
+      !starttijd ||
+      !eindtijd
+    ) {
+      alert(
+        "Vul de starttijd en eindtijd in."
+      );
+      return;
+    }
+
+    // ----------------------------------------
+    // CERTIFICATEN
+    // ----------------------------------------
+
     if (!openDienst) {
-      if (!medewerkerId) {
+      // Controle mag nog niet bezig zijn
+      if (controleBezig) {
         alert(
-          "Selecteer eerst een medewerker."
+          "⏳ Wacht totdat de certificatencontrole klaar is."
         );
         return;
       }
 
+      // Controle moet uitgevoerd zijn
       if (
-        certificaatControle?.status ===
+        certificaatControle ===
+        null
+      ) {
+        alert(
+          "⚠️ De certificaten zijn nog niet gecontroleerd."
+        );
+        return;
+      }
+
+      // Ontbrekend
+      if (
+        certificaatControle.status ===
         "ontbrekend"
       ) {
         alert(
@@ -388,8 +558,9 @@ export default function PlanningForm({
         return;
       }
 
+      // Verlopen
       if (
-        certificaatControle?.status ===
+        certificaatControle.status ===
         "verlopen"
       ) {
         alert(
@@ -398,8 +569,9 @@ export default function PlanningForm({
         return;
       }
 
+      // Fout
       if (
-        certificaatControle?.status ===
+        certificaatControle.status ===
         "fout"
       ) {
         alert(
@@ -409,67 +581,125 @@ export default function PlanningForm({
       }
     }
 
+    // ----------------------------------------
+    // DIENSTTEKST
+    // ----------------------------------------
+
     const dienstTekst =
       starttijd && eindtijd
         ? `${starttijd}-${eindtijd}`
         : dienst;
 
-    const gegevens = {
-      datum,
-
-      dienst: dienstTekst,
-
-      terminal,
-      terminal_id: terminalId,
-
-      medewerker: openDienst
-        ? null
-        : medewerker,
-
-      medewerker_id: openDienst
-        ? null
-        : medewerkerId,
-
-      starttijd: starttijd || null,
-      eindtijd: eindtijd || null,
-
-      status: openDienst
-        ? "Open"
-        : "Ingepland",
-    };
-
-    let error;
-
-    if (planning?.id) {
-      const result = await supabase
-        .from("planning")
-        .update(gegevens)
-        .eq("id", planning.id);
-
-      error = result.error;
-    } else {
-      const result = await supabase
-        .from("planning")
-        .insert([gegevens]);
-
-      error = result.error;
-    }
-
-    if (error) {
-      console.error(error);
-      alert(error.message);
+    if (!dienstTekst) {
+      alert(
+        "Vul een dienst in."
+      );
       return;
     }
 
-    alert(
-      planning?.id
-        ? "✅ Dienst bijgewerkt!"
-        : "✅ Dienst opgeslagen!"
-    );
+    // ----------------------------------------
+    // GEGEVENS
+    // ----------------------------------------
 
-    resetForm();
+    const gegevens = {
+      datum,
 
-    onSaved?.();
+      dienst:
+        dienstTekst,
+
+      terminal,
+      terminal_id:
+        terminalId,
+
+      medewerker:
+        openDienst
+          ? null
+          : medewerker,
+
+      medewerker_id:
+        openDienst
+          ? null
+          : medewerkerId,
+
+      starttijd:
+        starttijd || null,
+
+      eindtijd:
+        eindtijd || null,
+
+      status:
+        openDienst
+          ? "Open"
+          : "Ingepland",
+    };
+
+    setOpslaanBezig(true);
+
+    try {
+      let error = null;
+
+      // --------------------------------------
+      // BEWERKEN
+      // --------------------------------------
+
+      if (planning?.id) {
+        const result =
+          await supabase
+            .from("planning")
+            .update(
+              gegevens
+            )
+            .eq(
+              "id",
+              planning.id
+            );
+
+        error =
+          result.error;
+      }
+
+      // --------------------------------------
+      // NIEUW
+      // --------------------------------------
+
+      else {
+        const result =
+          await supabase
+            .from("planning")
+            .insert([
+              gegevens,
+            ]);
+
+        error =
+          result.error;
+      }
+
+      if (error) {
+        throw error;
+      }
+
+      alert(
+        planning?.id
+          ? "✅ Dienst bijgewerkt!"
+          : "✅ Dienst opgeslagen!"
+      );
+
+      resetForm();
+
+      onSaved?.();
+    } catch (error) {
+      console.error(
+        "Fout bij opslaan planning:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Er is iets misgegaan bij het opslaan."
+      );
+    } finally {
+      setOpslaanBezig(false);
+    }
   }
 
   // ==========================================
@@ -491,8 +721,15 @@ export default function PlanningForm({
 
     setOpenDienst(false);
 
-    setVereisteCertificaten([]);
-    setCertificaatControle(null);
+    setVereisteCertificaten(
+      []
+    );
+
+    setCertificaatControle(
+      null
+    );
+
+    setControleBezig(false);
   }
 
   // ==========================================
@@ -500,13 +737,15 @@ export default function PlanningForm({
   // ==========================================
 
   function terminalGekozen(e) {
-    const waarde = e.target.value;
+    const waarde =
+      e.target.value;
 
-    const gekozen = terminals.find(
-      (t) =>
-        String(t.id) ===
-        String(waarde)
-    );
+    const gekozen =
+      terminals.find(
+        (t) =>
+          String(t.id) ===
+          String(waarde)
+      );
 
     setTerminal(
       gekozen?.naam || ""
@@ -515,6 +754,11 @@ export default function PlanningForm({
     setTerminalId(
       gekozen?.id ?? null
     );
+
+    // Oude controle wissen
+    setCertificaatControle(
+      null
+    );
   }
 
   // ==========================================
@@ -522,13 +766,15 @@ export default function PlanningForm({
   // ==========================================
 
   function medewerkerGekozen(e) {
-    const waarde = e.target.value;
+    const waarde =
+      e.target.value;
 
-    const gekozen = medewerkers.find(
-      (m) =>
-        String(m.id) ===
-        String(waarde)
-    );
+    const gekozen =
+      medewerkers.find(
+        (m) =>
+          String(m.id) ===
+          String(waarde)
+      );
 
     setMedewerker(
       gekozen?.naam || ""
@@ -536,6 +782,11 @@ export default function PlanningForm({
 
     setMedewerkerId(
       gekozen?.id ?? null
+    );
+
+    // Oude controle wissen
+    setCertificaatControle(
+      null
     );
   }
 
@@ -545,38 +796,52 @@ export default function PlanningForm({
 
   function statusStyle(status) {
     if (
-      status === "ontbrekend" ||
-      status === "verlopen"
+      status ===
+        "ontbrekend" ||
+      status ===
+        "verlopen"
     ) {
       return {
-        background: "#fee2e2",
-        color: "#b91c1c",
+        background:
+          "#fee2e2",
+        color:
+          "#b91c1c",
         border:
           "1px solid #fecaca",
       };
     }
 
-    if (status === "bijna") {
+    if (
+      status === "bijna"
+    ) {
       return {
-        background: "#fef3c7",
-        color: "#92400e",
+        background:
+          "#fef3c7",
+        color:
+          "#92400e",
         border:
           "1px solid #fde68a",
       };
     }
 
-    if (status === "geldig") {
+    if (
+      status === "geldig"
+    ) {
       return {
-        background: "#dcfce7",
-        color: "#166534",
+        background:
+          "#dcfce7",
+        color:
+          "#166534",
         border:
           "1px solid #bbf7d0",
       };
     }
 
     return {
-      background: "#f1f5f9",
-      color: "#475569",
+      background:
+        "#f1f5f9",
+      color:
+        "#475569",
       border:
         "1px solid #e2e8f0",
     };
@@ -587,16 +852,22 @@ export default function PlanningForm({
   // ==========================================
 
   const opslaanGeblokkeerd =
-    !openDienst &&
+    opslaanBezig ||
+    controleBezig ||
     (
-      certificaatControle?.status ===
-        "ontbrekend" ||
-      certificaatControle?.status ===
-        "verlopen"
+      !openDienst &&
+      (
+        certificaatControle?.status ===
+          "ontbrekend" ||
+        certificaatControle?.status ===
+          "verlopen" ||
+        certificaatControle?.status ===
+          "fout"
+      )
     );
 
   // ==========================================
-  // FORMULIER
+  // WEERGAVE
   // ==========================================
 
   return (
@@ -604,31 +875,24 @@ export default function PlanningForm({
       onSubmit={opslaan}
       style={{
         display: "flex",
-        flexDirection: "column",
+        flexDirection:
+          "column",
         gap: "10px",
-
         width: "100%",
         maxWidth: "100%",
-
         maxHeight:
           "calc(100vh - 100px)",
-
         overflowY: "auto",
         overflowX: "hidden",
-
-        boxSizing: "border-box",
-
+        boxSizing:
+          "border-box",
         paddingRight: "8px",
         paddingBottom: "10px",
-
-        // Zorgt ervoor dat lange teksten
-        // niet buiten beeld vallen.
-        wordBreak: "break-word",
+        wordBreak:
+          "break-word",
       }}
     >
-      {/* ======================================
-          TITEL
-      ======================================= */}
+      {/* TITEL */}
 
       <h2
         style={{
@@ -642,9 +906,7 @@ export default function PlanningForm({
           : "📅 Nieuwe dienst"}
       </h2>
 
-      {/* ======================================
-          DATUM
-      ======================================= */}
+      {/* DATUM */}
 
       <label>Datum</label>
 
@@ -652,18 +914,19 @@ export default function PlanningForm({
         type="date"
         value={datum}
         onChange={(e) =>
-          setDatum(e.target.value)
+          setDatum(
+            e.target.value
+          )
         }
         required
         style={{
           width: "100%",
-          boxSizing: "border-box",
+          boxSizing:
+            "border-box",
         }}
       />
 
-      {/* ======================================
-          DIENST
-      ======================================= */}
+      {/* DIENST */}
 
       <label>Dienst</label>
 
@@ -673,21 +936,34 @@ export default function PlanningForm({
           const waarde =
             e.target.value;
 
-          setDienst(waarde);
+          setDienst(
+            waarde
+          );
 
           if (
             waarde.includes("-")
           ) {
-            const [start, eind] =
-              waarde.split("-");
+            const [
+              start,
+              eind,
+            ] =
+              waarde.split(
+                "-"
+              );
 
-            setStarttijd(start);
-            setEindtijd(eind);
+            setStarttijd(
+              start
+            );
+
+            setEindtijd(
+              eind
+            );
           }
         }}
         style={{
           width: "100%",
-          boxSizing: "border-box",
+          boxSizing:
+            "border-box",
         }}
       >
         <option value="">
@@ -715,11 +991,11 @@ export default function PlanningForm({
         </option>
       </select>
 
-      {/* ======================================
-          STARTTIJD
-      ======================================= */}
+      {/* STARTTIJD */}
 
-      <label>Starttijd</label>
+      <label>
+        Starttijd
+      </label>
 
       <input
         type="time"
@@ -729,17 +1005,19 @@ export default function PlanningForm({
             e.target.value
           )
         }
+        required
         style={{
           width: "100%",
-          boxSizing: "border-box",
+          boxSizing:
+            "border-box",
         }}
       />
 
-      {/* ======================================
-          EINDTIJD
-      ======================================= */}
+      {/* EINDTIJD */}
 
-      <label>Eindtijd</label>
+      <label>
+        Eindtijd
+      </label>
 
       <input
         type="time"
@@ -749,44 +1027,51 @@ export default function PlanningForm({
             e.target.value
           )
         }
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      />
-
-      {/* ======================================
-          TERMINAL
-      ======================================= */}
-
-      <label>Terminal</label>
-
-      <select
-        value={terminalId || ""}
-        onChange={terminalGekozen}
         required
         style={{
           width: "100%",
-          boxSizing: "border-box",
+          boxSizing:
+            "border-box",
+        }}
+      />
+
+      {/* TERMINAL */}
+
+      <label>
+        Terminal
+      </label>
+
+      <select
+        value={
+          terminalId || ""
+        }
+        onChange={
+          terminalGekozen
+        }
+        required
+        style={{
+          width: "100%",
+          boxSizing:
+            "border-box",
         }}
       >
         <option value="">
           Kies terminal...
         </option>
 
-        {terminals.map((t) => (
-          <option
-            key={t.id}
-            value={t.id}
-          >
-            {t.naam}
-          </option>
-        ))}
+        {terminals.map(
+          (t) => (
+            <option
+              key={t.id}
+              value={t.id}
+            >
+              {t.naam}
+            </option>
+          )
+        )}
       </select>
 
-      {/* ======================================
-          VEREISTE CERTIFICATEN
-      ======================================= */}
+      {/* VEREISTE CERTIFICATEN */}
 
       {terminalId &&
         vereisteCertificaten.length >
@@ -799,26 +1084,32 @@ export default function PlanningForm({
                 "#f0fdf4",
               border:
                 "1px solid #bbf7d0",
-              borderRadius: "10px",
+              borderRadius:
+                "10px",
             }}
           >
             <strong
               style={{
-                color: "#166534",
+                color:
+                  "#166534",
               }}
             >
-              🏅 Vereiste certificaten
+              🏅 Vereiste
+              certificaten
             </strong>
 
             <div
               style={{
-                marginTop: "8px",
+                marginTop:
+                  "8px",
               }}
             >
               {vereisteCertificaten.map(
                 (cert) => (
                   <div
-                    key={cert.id}
+                    key={
+                      cert.id
+                    }
                     style={{
                       color:
                         "#166534",
@@ -837,9 +1128,7 @@ export default function PlanningForm({
           </div>
         )}
 
-      {/* ======================================
-          GEEN CERTIFICATEN
-      ======================================= */}
+      {/* GEEN CERTIFICATEN */}
 
       {terminalId &&
         !controleBezig &&
@@ -866,9 +1155,7 @@ export default function PlanningForm({
           </div>
         )}
 
-      {/* ======================================
-          OPEN DIENST
-      ======================================= */}
+      {/* OPEN DIENST */}
 
       <label
         style={{
@@ -876,24 +1163,35 @@ export default function PlanningForm({
           alignItems:
             "center",
           gap: "10px",
-          margin: "10px 0",
-          cursor: "pointer",
+          margin:
+            "10px 0",
+          cursor:
+            "pointer",
         }}
       >
         <input
           type="checkbox"
-          checked={openDienst}
+          checked={
+            openDienst
+          }
           onChange={(e) => {
             const actief =
-              e.target.checked;
+              e.target
+                .checked;
 
             setOpenDienst(
               actief
             );
 
             if (actief) {
-              setMedewerker("");
-              setMedewerkerId(null);
+              setMedewerker(
+                ""
+              );
+
+              setMedewerkerId(
+                null
+              );
+
               setCertificaatControle(
                 null
               );
@@ -904,30 +1202,42 @@ export default function PlanningForm({
         <span>
           📢 Open dienst
           <br />
+
           <small
             style={{
-              color: "#64748b",
+              color:
+                "#64748b",
             }}
           >
-            nog geen medewerker
+            nog geen
+            medewerker
           </small>
         </span>
       </label>
 
-      {/* ======================================
-          MEDEWERKER
-      ======================================= */}
+      {/* MEDEWERKER */}
 
-      <label>Medewerker</label>
+      <label>
+        Medewerker
+      </label>
 
       <select
-        value={medewerkerId || ""}
-        disabled={openDienst}
-        required={!openDienst}
-        onChange={medewerkerGekozen}
+        value={
+          medewerkerId || ""
+        }
+        disabled={
+          openDienst
+        }
+        required={
+          !openDienst
+        }
+        onChange={
+          medewerkerGekozen
+        }
         style={{
           width: "100%",
-          boxSizing: "border-box",
+          boxSizing:
+            "border-box",
         }}
       >
         <option value="">
@@ -936,29 +1246,33 @@ export default function PlanningForm({
             : "Kies medewerker..."}
         </option>
 
-        {medewerkers.map((m) => (
-          <option
-            key={m.id}
-            value={m.id}
-          >
-            {m.naam}
-          </option>
-        ))}
+        {medewerkers.map(
+          (m) => (
+            <option
+              key={m.id}
+              value={m.id}
+            >
+              {m.naam}
+            </option>
+          )
+        )}
       </select>
 
-      {/* ======================================
-          CONTROLE BEZIG
-      ======================================= */}
+      {/* CONTROLE BEZIG */}
 
       {controleBezig && (
         <div
           style={{
-            padding: "12px",
-            borderRadius: "10px",
+            padding:
+              "12px",
+            borderRadius:
+              "10px",
             background:
               "#f1f5f9",
             color:
               "#475569",
+            fontWeight:
+              "600",
           }}
         >
           ⏳ Certificaten
@@ -966,64 +1280,65 @@ export default function PlanningForm({
         </div>
       )}
 
-      {/* ======================================
-          ALLES GELDIG
-      ======================================= */}
+      {/* GELDIG */}
 
       {!controleBezig &&
         certificaatControle?.status ===
           "geldig" && (
           <div
             style={{
-              padding: "12px",
-              borderRadius: "10px",
+              padding:
+                "12px",
+              borderRadius:
+                "10px",
               ...statusStyle(
                 "geldig"
               ),
-              fontWeight: "700",
+              fontWeight:
+                "700",
             }}
           >
             🟢 Alle vereiste
-            certificaten zijn
-            geldig.
+            certificaten
+            zijn geldig.
           </div>
         )}
 
-      {/* ======================================
-          GEEN EISEN
-      ======================================= */}
+      {/* GEEN EISEN */}
 
       {!controleBezig &&
         certificaatControle?.status ===
           "geen_eisen" && (
           <div
             style={{
-              padding: "12px",
-              borderRadius: "10px",
+              padding:
+                "12px",
+              borderRadius:
+                "10px",
               ...statusStyle(
                 "geen_eisen"
               ),
             }}
           >
             ℹ️ Voor deze terminal
-            zijn nog geen
+            zijn geen
             verplichte
             certificaten
             ingesteld.
           </div>
         )}
 
-      {/* ======================================
-          BIJNA VERLOPEN
-      ======================================= */}
+      {/* BIJNA VERLOPEN */}
 
       {!controleBezig &&
         certificaatControle?.status ===
           "bijna" && (
           <div
             style={{
-              padding: "12px",
-              borderRadius: "10px",
+              padding:
+                "12px",
+              borderRadius:
+                "10px",
               ...statusStyle(
                 "bijna"
               ),
@@ -1039,7 +1354,9 @@ export default function PlanningForm({
             {certificaatControle.bijnaVerlopen.map(
               (cert) => (
                 <div
-                  key={cert.id}
+                  key={
+                    cert.id
+                  }
                   style={{
                     marginTop:
                       "5px",
@@ -1059,17 +1376,17 @@ export default function PlanningForm({
           </div>
         )}
 
-      {/* ======================================
-          VERLOPEN
-      ======================================= */}
+      {/* VERLOPEN */}
 
       {!controleBezig &&
         certificaatControle?.status ===
           "verlopen" && (
           <div
             style={{
-              padding: "12px",
-              borderRadius: "10px",
+              padding:
+                "12px",
+              borderRadius:
+                "10px",
               ...statusStyle(
                 "verlopen"
               ),
@@ -1083,7 +1400,9 @@ export default function PlanningForm({
             {certificaatControle.verlopen.map(
               (cert) => (
                 <div
-                  key={cert.id}
+                  key={
+                    cert.id
+                  }
                   style={{
                     marginTop:
                       "5px",
@@ -1103,31 +1422,34 @@ export default function PlanningForm({
           </div>
         )}
 
-      {/* ======================================
-          ONTBREKEND
-      ======================================= */}
+      {/* ONTBREKEND */}
 
       {!controleBezig &&
         certificaatControle?.status ===
           "ontbrekend" && (
           <div
             style={{
-              padding: "12px",
-              borderRadius: "10px",
+              padding:
+                "12px",
+              borderRadius:
+                "10px",
               ...statusStyle(
                 "ontbrekend"
               ),
             }}
           >
             <strong>
-              ❌ Vereist certificaat
+              ❌ Vereist
+              certificaat
               ontbreekt
             </strong>
 
             {certificaatControle.ontbrekend.map(
               (cert) => (
                 <div
-                  key={cert.id}
+                  key={
+                    cert.id
+                  }
                   style={{
                     marginTop:
                       "5px",
@@ -1149,25 +1471,25 @@ export default function PlanningForm({
                   "600",
               }}
             >
-              Deze medewerker kan
-              niet voor deze
-              terminal worden
-              ingepland.
+              Deze medewerker
+              kan niet voor
+              deze terminal
+              worden ingepland.
             </div>
           </div>
         )}
 
-      {/* ======================================
-          FOUT
-      ======================================= */}
+      {/* FOUT */}
 
       {!controleBezig &&
         certificaatControle?.status ===
           "fout" && (
           <div
             style={{
-              padding: "12px",
-              borderRadius: "10px",
+              padding:
+                "12px",
+              borderRadius:
+                "10px",
               background:
                 "#fee2e2",
               color:
@@ -1177,44 +1499,44 @@ export default function PlanningForm({
             }}
           >
             ⚠️ De certificaten
-            konden niet worden
+            konden niet
+            worden
             gecontroleerd.
           </div>
         )}
 
-      {/* ======================================
-          OPSLAAN
-      ======================================= */}
+      {/* OPSLAAN */}
 
       <button
         className="new-btn"
         type="submit"
-        disabled={opslaanGeblokkeerd}
+        disabled={
+          opslaanGeblokkeerd
+        }
         style={{
           width: "100%",
-          boxSizing: "border-box",
-
+          boxSizing:
+            "border-box",
           background:
             opslaanGeblokkeerd
               ? "#94a3b8"
               : "#16a34a",
-
-          color: "#ffffff",
-
+          color:
+            "#ffffff",
           cursor:
             opslaanGeblokkeerd
               ? "not-allowed"
               : "pointer",
-
           opacity:
             opslaanGeblokkeerd
               ? 0.7
               : 1,
-
           flexShrink: 0,
         }}
       >
-        {planning?.id
+        {opslaanBezig
+          ? "⏳ Opslaan..."
+          : planning?.id
           ? "💾 Wijzigen"
           : "💾 Opslaan"}
       </button>

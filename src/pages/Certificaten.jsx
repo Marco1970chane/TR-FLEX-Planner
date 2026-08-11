@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 import CertificatenForm from "../components/CertificatenForm";
 import TerminalCertificaten from "../components/certificaten/TerminalCertificaten";
+import InzetbaarheidTerminal from "../components/certificaten/InzetbaarheidTerminal";
 
 export default function Certificaten() {
   const [certificaten, setCertificaten] = useState([]);
@@ -1444,6 +1445,7 @@ export default function Certificaten() {
       ======================================= */}
 
       <TerminalCertificaten />
+      <InzetbaarheidTerminal />
 
       {/* ======================================
           MODAL NIEUW / BEWERKEN
