@@ -5,6 +5,7 @@ import {
   startOfWeek,
   format,
 } from "date-fns";
+
 import { nl } from "date-fns/locale";
 
 import StatusBadge from "./StatusBadge";
@@ -394,6 +395,11 @@ export default function WeekPlanner({
                       "1px solid #166534",
                     boxSizing:
                       "border-box",
+
+                    WebkitPrintColorAdjust:
+                      "exact",
+                    printColorAdjust:
+                      "exact",
                   }}
                 >
                   🏭 Terminal
@@ -444,6 +450,11 @@ export default function WeekPlanner({
                             "1px solid #d1fae5",
                           boxSizing:
                             "border-box",
+
+                          WebkitPrintColorAdjust:
+                            "exact",
+                          printColorAdjust:
+                            "exact",
                         }}
                       >
                         <div
@@ -546,6 +557,11 @@ export default function WeekPlanner({
                           "top",
                         boxSizing:
                           "border-box",
+
+                        WebkitPrintColorAdjust:
+                          "exact",
+                        printColorAdjust:
+                          "exact",
                       }}
                     >
                       <div
@@ -624,6 +640,11 @@ export default function WeekPlanner({
                                 "1px solid #e2e8f0",
                               boxSizing:
                                 "border-box",
+
+                              WebkitPrintColorAdjust:
+                                "exact",
+                              printColorAdjust:
+                                "exact",
                             }}
                           >
                             {diensten.length ===
@@ -703,6 +724,11 @@ export default function WeekPlanner({
                                             "0 2px 6px rgba(15,23,42,.06)",
                                           transition:
                                             "transform .15s ease, box-shadow .15s ease",
+
+                                          WebkitPrintColorAdjust:
+                                            "exact",
+                                          printColorAdjust:
+                                            "exact",
                                         }}
                                       >
                                         {/* TIJD */}
@@ -814,6 +840,11 @@ export default function WeekPlanner({
               "#64748b",
             fontSize:
               "12px",
+
+            WebkitPrintColorAdjust:
+              "exact",
+            printColorAdjust:
+              "exact",
           }}
         >
           <strong

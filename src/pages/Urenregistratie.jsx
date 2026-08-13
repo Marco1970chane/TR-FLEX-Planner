@@ -6,6 +6,8 @@ import { supabase } from "../services/supabase";
 import UrenregistratieForm from "../components/UrenregistratieForm";
 import UrenDashboard from "../components/uren/UrenDashboard";
 
+import { exportUrenExcel } from "../utils/exportUrenExcel";
+
 export default function Urenregistratie() {
   const [uren, setUren] = useState([]);
 
@@ -13,12 +15,8 @@ export default function Urenregistratie() {
   const [datumFilter, setDatumFilter] = useState("");
 
   const [toonForm, setToonForm] = useState(false);
-  const [geselecteerd, setGeselecteerd] =
-    useState(null);
-
   const [laden, setLaden] = useState(true);
-  const [actieBezig, setActieBezig] =
-    useState(null);
+  const [actieBezig, setActieBezig] = useState(null);
 
   // ==========================================
   // UREN LADEN
@@ -96,27 +94,21 @@ export default function Urenregistratie() {
   // ==========================================
 
   function statusKleur(status) {
-    if (
-      isGoedgekeurd(status)
-    ) {
+    if (isGoedgekeurd(status)) {
       return {
         background: "#dcfce7",
         color: "#166534",
       };
     }
 
-    if (
-      isAfgekeurd(status)
-    ) {
+    if (isAfgekeurd(status)) {
       return {
         background: "#fee2e2",
         color: "#b91c1c",
       };
     }
 
-    if (
-      isOpen(status)
-    ) {
+    if (isOpen(status)) {
       return {
         background: "#fef3c7",
         color: "#92400e",
@@ -142,28 +134,23 @@ export default function Urenregistratie() {
     }
 
     const melding =
-      nieuweStatus ===
-      "Goedgekeurd"
+      nieuweStatus === "Goedgekeurd"
         ? "Deze urenregistratie goedkeuren?"
         : "Deze urenregistratie afkeuren?";
 
-    if (
-      !window.confirm(melding)
-    ) {
+    if (!window.confirm(melding)) {
       return;
     }
 
     setActieBezig(id);
 
     try {
-      const { error } =
-        await supabase
-          .from("urenregistratie")
-          .update({
-            status:
-              nieuweStatus,
-          })
-          .eq("id", id);
+      const { error } = await supabase
+        .from("urenregistratie")
+        .update({
+          status: nieuweStatus,
+        })
+        .eq("id", id);
 
       if (error) {
         throw error;
@@ -174,16 +161,14 @@ export default function Urenregistratie() {
           u.id === id
             ? {
                 ...u,
-                status:
-                  nieuweStatus,
+                status: nieuweStatus,
               }
             : u
         )
       );
 
       alert(
-        nieuweStatus ===
-          "Goedgekeurd"
+        nieuweStatus === "Goedgekeurd"
           ? "✅ Uren goedgekeurd."
           : "❌ Uren afgekeurd."
       );
@@ -196,79 +181,6 @@ export default function Urenregistratie() {
       alert(
         error.message ||
           "Status kon niet worden gewijzigd."
-      );
-    } finally {
-      setActieBezig(null);
-    }
-  }
-
-  // ==========================================
-  // NIEUWE REGISTRATIE
-  // ==========================================
-
-  function openNieuw() {
-    setGeselecteerd(null);
-    setToonForm(true);
-  }
-
-  // ==========================================
-  // BEWERKEN
-  // ==========================================
-
-  function openBewerken(registratie) {
-    setGeselecteerd(registratie);
-    setToonForm(true);
-  }
-
-  // ==========================================
-  // VERWIJDEREN
-  // ==========================================
-
-  async function verwijderUren(id) {
-    if (!id) {
-      return;
-    }
-
-    const akkoord =
-      window.confirm(
-        "Weet je zeker dat je deze urenregistratie wilt verwijderen?"
-      );
-
-    if (!akkoord) {
-      return;
-    }
-
-    setActieBezig(id);
-
-    try {
-      const { error } =
-        await supabase
-          .from("urenregistratie")
-          .delete()
-          .eq("id", id);
-
-      if (error) {
-        throw error;
-      }
-
-      setUren((vorige) =>
-        vorige.filter(
-          (u) => u.id !== id
-        )
-      );
-
-      alert(
-        "🗑️ Urenregistratie verwijderd."
-      );
-    } catch (error) {
-      console.error(
-        "Fout bij verwijderen:",
-        error
-      );
-
-      alert(
-        error.message ||
-          "Urenregistratie kon niet worden verwijderd."
       );
     } finally {
       setActieBezig(null);
@@ -427,6 +339,22 @@ export default function Urenregistratie() {
     }, [uren]);
 
   // ==========================================
+  // EXCEL EXPORT
+  // ==========================================
+
+  function exporteerExcel() {
+    exportUrenExcel(gefilterd);
+  }
+
+  // ==========================================
+  // NIEUWE REGISTRATIE
+  // ==========================================
+
+  function openNieuw() {
+    setToonForm(true);
+  }
+
+  // ==========================================
   // RENDER
   // ==========================================
 
@@ -487,16 +415,45 @@ export default function Urenregistratie() {
               </p>
             </div>
 
-            <button
-              className="new-btn"
-              type="button"
+            <div
               style={{
-                background: "#16a34a",
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
               }}
-              onClick={openNieuw}
             >
-              + Nieuwe registratie
-            </button>
+              {/* EXCEL */}
+
+              <button
+                className="new-btn"
+                type="button"
+                onClick={
+                  exporteerExcel
+                }
+                style={{
+                  background:
+                    "#15803d",
+                }}
+              >
+                📊 Excel
+              </button>
+
+              {/* NIEUWE REGISTRATIE */}
+
+              <button
+                className="new-btn"
+                type="button"
+                style={{
+                  background:
+                    "#16a34a",
+                }}
+                onClick={
+                  openNieuw
+                }
+              >
+                + Nieuwe registratie
+              </button>
+            </div>
           </div>
         </div>
 
@@ -530,6 +487,8 @@ export default function Urenregistratie() {
             marginBottom: "20px",
           }}
         >
+          {/* OPEN */}
+
           <div
             style={{
               background: "#fef3c7",
@@ -558,6 +517,8 @@ export default function Urenregistratie() {
               {openAantal}
             </strong>
           </div>
+
+          {/* GOEDGEKEURD */}
 
           <div
             style={{
@@ -588,6 +549,8 @@ export default function Urenregistratie() {
             </strong>
           </div>
 
+          {/* AFGEKEURD */}
+
           <div
             style={{
               background: "#fee2e2",
@@ -616,6 +579,8 @@ export default function Urenregistratie() {
               {afgekeurdAantal}
             </strong>
           </div>
+
+          {/* GOEDGEKEURDE UREN */}
 
           <div
             style={{
@@ -879,7 +844,7 @@ export default function Urenregistratie() {
                     >
                       <th
                         style={{
-                          width: "9%",
+                          width: "10%",
                           padding:
                             "12px 6px",
                           textAlign:
@@ -891,7 +856,7 @@ export default function Urenregistratie() {
 
                       <th
                         style={{
-                          width: "15%",
+                          width: "17%",
                           padding:
                             "12px 6px",
                           textAlign:
@@ -903,7 +868,7 @@ export default function Urenregistratie() {
 
                       <th
                         style={{
-                          width: "15%",
+                          width: "17%",
                           padding:
                             "12px 6px",
                           textAlign:
@@ -915,7 +880,7 @@ export default function Urenregistratie() {
 
                       <th
                         style={{
-                          width: "8%",
+                          width: "9%",
                           padding:
                             "12px 4px",
                           textAlign:
@@ -927,7 +892,7 @@ export default function Urenregistratie() {
 
                       <th
                         style={{
-                          width: "8%",
+                          width: "9%",
                           padding:
                             "12px 4px",
                           textAlign:
@@ -975,7 +940,7 @@ export default function Urenregistratie() {
 
                       <th
                         style={{
-                          width: "17%",
+                          width: "10%",
                           padding:
                             "12px 4px",
                           textAlign:
@@ -1165,12 +1130,12 @@ export default function Urenregistratie() {
                               </span>
                             </td>
 
-                            {/* ACTIES */}
-
                             <td
                               style={{
                                 padding:
-                                  "10px 3px",
+                                  "13px 2px",
+                                textAlign:
+                                  "center",
                               }}
                             >
                               <div
@@ -1179,57 +1144,15 @@ export default function Urenregistratie() {
                                     "flex",
                                   justifyContent:
                                     "center",
-                                  alignItems:
-                                    "center",
                                   gap:
                                     "4px",
-                                  flexWrap:
-                                    "wrap",
                                 }}
                               >
-                                {/* BEWERKEN */}
-
-                                <button
-                                  type="button"
-                                  title="Bewerken"
-                                  disabled={
-                                    bezig
-                                  }
-                                  onClick={() =>
-                                    openBewerken(
-                                      u
-                                    )
-                                  }
-                                  style={{
-                                    width:
-                                      "34px",
-                                    height:
-                                      "34px",
-                                    border:
-                                      "none",
-                                    borderRadius:
-                                      "8px",
-                                    background:
-                                      "#2563eb",
-                                    color:
-                                      "#ffffff",
-                                    cursor:
-                                      "pointer",
-                                    fontSize:
-                                      "15px",
-                                  }}
-                                >
-                                  ✏️
-                                </button>
-
-                                {/* GOEDKEUREN */}
-
                                 {!isGoedgekeurd(
                                   u.status
                                 ) && (
                                   <button
                                     type="button"
-                                    title="Goedkeuren"
                                     disabled={
                                       bezig
                                     }
@@ -1239,6 +1162,7 @@ export default function Urenregistratie() {
                                         "Goedgekeurd"
                                       )
                                     }
+                                    title="Goedkeuren"
                                     style={{
                                       width:
                                         "34px",
@@ -1253,7 +1177,9 @@ export default function Urenregistratie() {
                                       color:
                                         "#ffffff",
                                       cursor:
-                                        "pointer",
+                                        bezig
+                                          ? "wait"
+                                          : "pointer",
                                       fontSize:
                                         "15px",
                                     }}
@@ -1264,14 +1190,11 @@ export default function Urenregistratie() {
                                   </button>
                                 )}
 
-                                {/* AFKEUREN */}
-
                                 {!isAfgekeurd(
                                   u.status
                                 ) && (
                                   <button
                                     type="button"
-                                    title="Afkeuren"
                                     disabled={
                                       bezig
                                     }
@@ -1281,6 +1204,7 @@ export default function Urenregistratie() {
                                         "Afgekeurd"
                                       )
                                     }
+                                    title="Afkeuren"
                                     style={{
                                       width:
                                         "34px",
@@ -1291,11 +1215,13 @@ export default function Urenregistratie() {
                                       borderRadius:
                                         "8px",
                                       background:
-                                        "#f97316",
+                                        "#dc2626",
                                       color:
                                         "#ffffff",
                                       cursor:
-                                        "pointer",
+                                        bezig
+                                          ? "wait"
+                                          : "pointer",
                                       fontSize:
                                         "15px",
                                     }}
@@ -1305,41 +1231,6 @@ export default function Urenregistratie() {
                                       : "✕"}
                                   </button>
                                 )}
-
-                                {/* VERWIJDEREN */}
-
-                                <button
-                                  type="button"
-                                  title="Verwijderen"
-                                  disabled={
-                                    bezig
-                                  }
-                                  onClick={() =>
-                                    verwijderUren(
-                                      u.id
-                                    )
-                                  }
-                                  style={{
-                                    width:
-                                      "34px",
-                                    height:
-                                      "34px",
-                                    border:
-                                      "none",
-                                    borderRadius:
-                                      "8px",
-                                    background:
-                                      "#dc2626",
-                                    color:
-                                      "#ffffff",
-                                    cursor:
-                                      "pointer",
-                                    fontSize:
-                                      "15px",
-                                  }}
-                                >
-                                  🗑️
-                                </button>
                               </div>
                             </td>
                           </tr>
@@ -1387,8 +1278,6 @@ export default function Urenregistratie() {
                             "#ffffff",
                         }}
                       >
-                        {/* NAAM + STATUS */}
-
                         <div
                           style={{
                             display:
@@ -1457,8 +1346,6 @@ export default function Urenregistratie() {
                               "Open"}
                           </span>
                         </div>
-
-                        {/* DETAILS */}
 
                         <div
                           style={{
@@ -1555,82 +1442,16 @@ export default function Urenregistratie() {
                           </div>
                         </div>
 
-                        {/* MOBIELE ACTIES */}
-
                         <div
                           style={{
                             display:
-                              "grid",
-                            gridTemplateColumns:
-                              "repeat(2, 1fr)",
+                              "flex",
                             gap:
                               "8px",
                             marginTop:
                               "12px",
                           }}
                         >
-                          {/* BEWERKEN */}
-
-                          <button
-                            type="button"
-                            disabled={
-                              bezig
-                            }
-                            onClick={() =>
-                              openBewerken(
-                                u
-                              )
-                            }
-                            style={{
-                              border:
-                                "none",
-                              borderRadius:
-                                "9px",
-                              padding:
-                                "10px",
-                              background:
-                                "#2563eb",
-                              color:
-                                "#ffffff",
-                              fontWeight:
-                                "700",
-                            }}
-                          >
-                            ✏️ Bewerken
-                          </button>
-
-                          {/* VERWIJDEREN */}
-
-                          <button
-                            type="button"
-                            disabled={
-                              bezig
-                            }
-                            onClick={() =>
-                              verwijderUren(
-                                u.id
-                              )
-                            }
-                            style={{
-                              border:
-                                "none",
-                              borderRadius:
-                                "9px",
-                              padding:
-                                "10px",
-                              background:
-                                "#dc2626",
-                              color:
-                                "#ffffff",
-                              fontWeight:
-                                "700",
-                            }}
-                          >
-                            🗑️ Verwijderen
-                          </button>
-
-                          {/* GOEDKEUREN */}
-
                           {!isGoedgekeurd(
                             u.status
                           ) && (
@@ -1646,6 +1467,7 @@ export default function Urenregistratie() {
                                 )
                               }
                               style={{
+                                flex: 1,
                                 border:
                                   "none",
                                 borderRadius:
@@ -1666,8 +1488,6 @@ export default function Urenregistratie() {
                             </button>
                           )}
 
-                          {/* AFKEUREN */}
-
                           {!isAfgekeurd(
                             u.status
                           ) && (
@@ -1683,6 +1503,7 @@ export default function Urenregistratie() {
                                 )
                               }
                               style={{
+                                flex: 1,
                                 border:
                                   "none",
                                 borderRadius:
@@ -1690,7 +1511,7 @@ export default function Urenregistratie() {
                                 padding:
                                   "10px",
                                 background:
-                                  "#f97316",
+                                  "#dc2626",
                                 color:
                                   "#ffffff",
                                 fontWeight:
@@ -1714,7 +1535,7 @@ export default function Urenregistratie() {
       </div>
 
       {/* ====================================
-          NIEUW / BEWERKEN MODAL
+          NIEUWE REGISTRATIE MODAL
       ===================================== */}
 
       {toonForm && (
@@ -1746,23 +1567,26 @@ export default function Urenregistratie() {
             }}
           >
             <UrenregistratieForm
-              registratie={
-                geselecteerd
-              }
               onSaved={() => {
                 laadUren();
                 setToonForm(false);
-                setGeselecteerd(
-                  null
-                );
-              }}
-              onCancel={() => {
-                setToonForm(false);
-                setGeselecteerd(
-                  null
-                );
               }}
             />
+
+            <button
+              type="button"
+              className="new-btn"
+              style={{
+                marginTop: "20px",
+                width: "100%",
+                background: "#64748b",
+              }}
+              onClick={() =>
+                setToonForm(false)
+              }
+            >
+              Sluiten
+            </button>
           </div>
         </div>
       )}

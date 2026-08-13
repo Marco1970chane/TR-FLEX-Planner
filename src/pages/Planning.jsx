@@ -33,8 +33,7 @@ export default function Planning() {
   // STATE
   // ==========================================
 
-  const [planning, setPlanning] =
-    useState([]);
+  const [planning, setPlanning] = useState([]);
 
   const [toonForm, setToonForm] =
     useState(false);
@@ -83,7 +82,6 @@ export default function Planning() {
         ascending: true,
       });
 
-    // Medewerker ziet alleen eigen planning
     if (profile?.rol === "medewerker") {
       query = query.eq(
         "medewerker",
@@ -137,6 +135,112 @@ export default function Planning() {
       );
     };
   }, []);
+
+  // ==========================================
+  // PRINT CSS
+  // ==========================================
+
+  useEffect(() => {
+    const style =
+      document.createElement("style");
+
+    style.id = "planning-print-style";
+
+    style.innerHTML = `
+      @media print {
+        @page {
+          size: A4 landscape;
+          margin: 8mm;
+        }
+
+        html,
+        body {
+          background: #ffffff !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        body * {
+          visibility: hidden !important;
+        }
+
+        .planning-print-area,
+        .planning-print-area * {
+          visibility: visible !important;
+        }
+
+        .planning-print-area {
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 100% !important;
+          max-width: none !important;
+          background: #ffffff !important;
+          border: none !important;
+          box-shadow: none !important;
+          border-radius: 0 !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        .planning-print-area table {
+          width: 100% !important;
+          min-width: 0 !important;
+          table-layout: fixed !important;
+          font-size: 10px !important;
+        }
+
+        .planning-print-area th,
+        .planning-print-area td {
+          page-break-inside: avoid !important;
+        }
+
+        .planning-print-area button {
+          cursor: default !important;
+        }
+
+        .planning-print-area h2 {
+          color: #15803d !important;
+          margin-bottom: 4px !important;
+        }
+
+        .planning-print-area .status-badge {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        .planning-print-area * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+
+    return () => {
+      const bestaand =
+        document.getElementById(
+          "planning-print-style"
+        );
+
+      if (bestaand) {
+        bestaand.remove();
+      }
+    };
+  }, []);
+
+  // ==========================================
+  // PRINTEN
+  // ==========================================
+
+  function printPlanning() {
+    if (laden) {
+      return;
+    }
+
+    window.print();
+  }
 
   // ==========================================
   // DIENST VERWIJDEREN
@@ -259,21 +363,11 @@ export default function Planning() {
         ).toLowerCase();
 
       return (
-        medewerker.includes(
-          zoek
-        ) ||
-        terminal.includes(
-          zoek
-        ) ||
-        status.includes(
-          zoek
-        ) ||
-        dienst.includes(
-          zoek
-        ) ||
-        datum.includes(
-          zoek
-        )
+        medewerker.includes(zoek) ||
+        terminal.includes(zoek) ||
+        status.includes(zoek) ||
+        dienst.includes(zoek) ||
+        datum.includes(zoek)
       );
     });
 
@@ -365,13 +459,14 @@ export default function Planning() {
               flexWrap: "wrap",
             }}
           >
+            {/* LIJST */}
+
             <button
               type="button"
               className="new-btn"
               style={{
                 background:
-                  weergave ===
-                  "lijst"
+                  weergave === "lijst"
                     ? "#15803d"
                     : "#22c55e",
               }}
@@ -384,13 +479,14 @@ export default function Planning() {
               📋 Lijst
             </button>
 
+            {/* PLANNER */}
+
             <button
               type="button"
               className="new-btn"
               style={{
                 background:
-                  weergave ===
-                  "week"
+                  weergave === "week"
                     ? "#15803d"
                     : "#22c55e",
               }}
@@ -401,6 +497,22 @@ export default function Planning() {
               }
             >
               📅 Planner
+            </button>
+
+            {/* PRINT */}
+
+            <button
+              type="button"
+              className="new-btn"
+              style={{
+                background: "#2563eb",
+              }}
+              onClick={
+                printPlanning
+              }
+              disabled={laden}
+            >
+              🖨️ Print planning
             </button>
           </div>
 
@@ -421,6 +533,7 @@ export default function Planning() {
         ===================================== */}
 
         <div
+          className="planning-print-area"
           style={{
             background: "#ffffff",
             borderRadius: "18px",
@@ -445,8 +558,7 @@ export default function Planning() {
             </div>
           ) : (
             <>
-              {weergave ===
-              "lijst" ? (
+              {weergave === "lijst" ? (
                 <PlanningTable
                   planning={
                     gefilterdePlanning
