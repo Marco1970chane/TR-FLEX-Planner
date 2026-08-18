@@ -58,7 +58,7 @@ export default function PlanningTable({
       <table
         style={{
           width: "100%",
-          minWidth: "900px",
+          minWidth: "1050px",
           borderCollapse: "collapse",
           fontSize: "14px",
         }}
@@ -77,50 +77,48 @@ export default function PlanningTable({
             }}
           >
             <th
-              style={{
-                padding: "13px 10px",
-                textAlign: "left",
-                whiteSpace: "nowrap",
-              }}
+              style={thStyle}
             >
               Datum
             </th>
 
             <th
-              style={{
-                padding: "13px 10px",
-                textAlign: "left",
-              }}
+              style={thStyle}
             >
               Terminal
             </th>
 
             <th
-              style={{
-                padding: "13px 10px",
-                textAlign: "left",
-              }}
+              style={thStyle}
             >
               Dienst
             </th>
 
             <th
-              style={{
-                padding: "13px 10px",
-                textAlign: "left",
-              }}
+              style={thStyle}
             >
               Operator
             </th>
 
             <th
               style={{
-                padding: "13px 10px",
+                ...thStyle,
+                textAlign: "center",
+              }}
+            >
+              Planning
+            </th>
+
+            {/* NIEUW */}
+
+            <th
+              style={{
+                ...thStyle,
                 textAlign: "center",
                 whiteSpace: "nowrap",
               }}
             >
-              Status
+              Uren
             </th>
 
             <th
@@ -154,3 +152,13 @@ export default function PlanningTable({
     </div>
   );
 }
+
+// ============================================================
+// STIJL
+// ============================================================
+
+const thStyle = {
+  padding: "13px 10px",
+  textAlign: "left",
+  whiteSpace: "nowrap",
+};

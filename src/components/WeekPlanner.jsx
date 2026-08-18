@@ -6,7 +6,11 @@ import {
   format,
 } from "date-fns";
 
+import { useEffect, useState } from "react";
+
 import { nl } from "date-fns/locale";
+
+import { supabase } from "../../services/supabase";
 
 import StatusBadge from "./StatusBadge";
 
@@ -26,6 +30,16 @@ export default function WeekPlanner({
   onEdit,
 }) {
   // ==========================================
+  // URENREGISTRATIES
+  // ==========================================
+
+  const [urenregistraties, setUrenregistraties] =
+    useState([]);
+
+  const [urenLaden, setUrenLaden] =
+    useState(false);
+
+  // ==========================================
   // WEEK
   // ==========================================
 
@@ -35,6 +49,105 @@ export default function WeekPlanner({
       weekStartsOn: 1,
     }
   );
+
+  // ==========================================
+  // UREN LADEN
+  // ==========================================
+
+  useEffect(() => {
+    laadUrenregistraties();
+  }, [planning]);
+
+  async function laadUrenregistraties() {
+    const planningIds = planning
+      .map((item) => item.id)
+      .filter(Boolean);
+
+    if (planningIds.length === 0) {
+      setUrenregistraties([]);
+      return;
+    }
+
+    setUrenLaden(true);
+
+    try {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("urenregistratie")
+        .select(
+          `
+            id,
+            planning_id,
+            medewerker,
+            starttijd,
+            eindtijd,
+            pauze_minuten,
+            gewerkte_uren,
+            status,
+            ingediend_op
+          `
+        )
+        .in(
+          "planning_id",
+          planningIds
+        )
+        .order(
+          "ingediend_op",
+          {
+            ascending: false,
+          }
+        );
+
+      if (error) {
+        console.error(
+          "Fout bij laden urenregistraties:",
+          error
+        );
+
+        setUrenregistraties([]);
+        return;
+      }
+
+      setUrenregistraties(
+        data || []
+      );
+    } catch (error) {
+      console.error(
+        "Onverwachte fout bij laden uren:",
+        error
+      );
+
+      setUrenregistraties([]);
+    } finally {
+      setUrenLaden(false);
+    }
+  }
+
+  // ==========================================
+  // UREN BIJ DIENST ZOEKEN
+  // ==========================================
+
+  function urenVoorDienst(item) {
+    const resultaten =
+      urenregistraties.filter(
+        (uren) =>
+          String(
+            uren.planning_id
+          ) ===
+          String(item.id)
+      );
+
+    if (
+      resultaten.length === 0
+    ) {
+      return null;
+    }
+
+    // Nieuwste registratie gebruiken
+    return resultaten[0];
+  }
 
   // ==========================================
   // DATUM
@@ -116,14 +229,18 @@ export default function WeekPlanner({
       item.starttijd &&
       item.eindtijd
     ) {
-      return `${item.starttijd} - ${item.eindtijd}`;
+      return `${formatTijd(
+        item.starttijd
+      )} - ${formatTijd(
+        item.eindtijd
+      )}`;
     }
 
     return item.dienst || "-";
   }
 
   // ==========================================
-  // STATUS
+  // STATUS PLANNING
   // ==========================================
 
   function isOpen(item) {
@@ -148,10 +265,193 @@ export default function WeekPlanner({
   }
 
   // ==========================================
+  // STATUS UREN
+  // ==========================================
+
+  function normaleUrenStatus(
+    status
+  ) {
+    return (
+      status || ""
+    )
+      .toString()
+      .toLowerCase()
+      .trim();
+  }
+
+  function isUrenIngediend(
+    uren
+  ) {
+    if (!uren) {
+      return false;
+    }
+
+    return (
+      normaleUrenStatus(
+        uren.status
+      ) === "ingediend"
+    );
+  }
+
+  function isUrenGoedgekeurd(
+    uren
+  ) {
+    if (!uren) {
+      return false;
+    }
+
+    const status =
+      normaleUrenStatus(
+        uren.status
+      );
+
+    return (
+      status ===
+        "goedgekeurd" ||
+      status === "akkoord" ||
+      status === "voltooid"
+    );
+  }
+
+  function isUrenAfgekeurd(
+    uren
+  ) {
+    if (!uren) {
+      return false;
+    }
+
+    return (
+      normaleUrenStatus(
+        uren.status
+      ) === "afgekeurd"
+    );
+  }
+
+  // ==========================================
+  // UREN STATUS TEKST
+  // ==========================================
+
+  function urenStatusInfo(
+    uren
+  ) {
+    if (!uren) {
+      return {
+        tekst: "Nog geen uren",
+        icon: "⚪",
+        background: "#f1f5f9",
+        color: "#64748b",
+        border: "#cbd5e1",
+      };
+    }
+
+    if (
+      isUrenGoedgekeurd(
+        uren
+      )
+    ) {
+      return {
+        tekst: "Uren goedgekeurd",
+        icon: "🟢",
+        background: "#dcfce7",
+        color: "#166534",
+        border: "#86efac",
+      };
+    }
+
+    if (
+      isUrenAfgekeurd(
+        uren
+      )
+    ) {
+      return {
+        tekst: "Uren afgekeurd",
+        icon: "🔴",
+        background: "#fee2e2",
+        color: "#b91c1c",
+        border: "#fca5a5",
+      };
+    }
+
+    if (
+      isUrenIngediend(
+        uren
+      )
+    ) {
+      return {
+        tekst: "Uren ingediend",
+        icon: "🟠",
+        background: "#fef3c7",
+        color: "#92400e",
+        border: "#fcd34d",
+      };
+    }
+
+    return {
+      tekst:
+        uren.status ||
+        "Uren geregistreerd",
+      icon: "🔵",
+      background: "#dbeafe",
+      color: "#1d4ed8",
+      border: "#93c5fd",
+    };
+  }
+
+  // ==========================================
   // KAART STIJL
   // ==========================================
 
   function kaartStijl(item) {
+    const uren =
+      urenVoorDienst(item);
+
+    // Eerst urenstatus controleren
+    if (
+      isUrenGoedgekeurd(
+        uren
+      )
+    ) {
+      return {
+        background:
+          "#f0fdf4",
+        border:
+          "#86efac",
+        accent:
+          "#15803d",
+      };
+    }
+
+    if (
+      isUrenAfgekeurd(
+        uren
+      )
+    ) {
+      return {
+        background:
+          "#fef2f2",
+        border:
+          "#fca5a5",
+        accent:
+          "#dc2626",
+      };
+    }
+
+    if (
+      isUrenIngediend(
+        uren
+      )
+    ) {
+      return {
+        background:
+          "#fffbeb",
+        border:
+          "#fcd34d",
+        accent:
+          "#d97706",
+      };
+    }
+
+    // Daarna planningstatus
     if (isOpen(item)) {
       return {
         background:
@@ -184,6 +484,47 @@ export default function WeekPlanner({
       accent:
         "#2563eb",
     };
+  }
+
+  // ==========================================
+  // TIJD FORMATTEREN
+  // ==========================================
+
+  function formatTijd(tijd) {
+    if (!tijd) {
+      return "";
+    }
+
+    return String(tijd).substring(
+      0,
+      5
+    );
+  }
+
+  // ==========================================
+  // UREN WEERGAVE
+  // ==========================================
+
+  function urenTekst(uren) {
+    if (!uren) {
+      return null;
+    }
+
+    const aantal =
+      Number(
+        uren.gewerkte_uren
+      );
+
+    if (
+      Number.isNaN(aantal) ||
+      aantal <= 0
+    ) {
+      return null;
+    }
+
+    return `${aantal.toFixed(
+      2
+    )} uur`;
   }
 
   // ==========================================
@@ -254,24 +595,43 @@ export default function WeekPlanner({
 
         <div
           style={{
-            padding:
-              "7px 12px",
-            background:
-              "#f0fdf4",
-            border:
-              "1px solid #bbf7d0",
-            borderRadius:
-              "999px",
-            color:
-              "#166534",
-            fontSize:
-              "13px",
-            fontWeight:
-              "700",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
           }}
         >
-          {planning.length}{" "}
-          diensten
+          {urenLaden && (
+            <span
+              style={{
+                fontSize: "12px",
+                color: "#64748b",
+              }}
+            >
+              ⏳ Uren laden...
+            </span>
+          )}
+
+          <div
+            style={{
+              padding:
+                "7px 12px",
+              background:
+                "#f0fdf4",
+              border:
+                "1px solid #bbf7d0",
+              borderRadius:
+                "999px",
+              color:
+                "#166534",
+              fontSize:
+                "13px",
+              fontWeight:
+                "700",
+            }}
+          >
+            {planning.length}{" "}
+            diensten
+          </div>
         </div>
       </div>
 
@@ -332,10 +692,6 @@ export default function WeekPlanner({
           </div>
         </div>
       ) : (
-        /* ====================================
-           PLANNER
-        ===================================== */
-
         <div
           style={{
             width: "100%",
@@ -395,7 +751,6 @@ export default function WeekPlanner({
                       "1px solid #166534",
                     boxSizing:
                       "border-box",
-
                     WebkitPrintColorAdjust:
                       "exact",
                     printColorAdjust:
@@ -450,7 +805,6 @@ export default function WeekPlanner({
                             "1px solid #d1fae5",
                           boxSizing:
                             "border-box",
-
                           WebkitPrintColorAdjust:
                             "exact",
                           printColorAdjust:
@@ -557,7 +911,6 @@ export default function WeekPlanner({
                           "top",
                         boxSizing:
                           "border-box",
-
                         WebkitPrintColorAdjust:
                           "exact",
                         printColorAdjust:
@@ -640,7 +993,6 @@ export default function WeekPlanner({
                                 "1px solid #e2e8f0",
                               boxSizing:
                                 "border-box",
-
                               WebkitPrintColorAdjust:
                                 "exact",
                               printColorAdjust:
@@ -687,6 +1039,21 @@ export default function WeekPlanner({
                                         item
                                       );
 
+                                    const uren =
+                                      urenVoorDienst(
+                                        item
+                                      );
+
+                                    const urenInfo =
+                                      urenStatusInfo(
+                                        uren
+                                      );
+
+                                    const urenAantal =
+                                      urenTekst(
+                                        uren
+                                      );
+
                                     return (
                                       <button
                                         key={
@@ -724,7 +1091,6 @@ export default function WeekPlanner({
                                             "0 2px 6px rgba(15,23,42,.06)",
                                           transition:
                                             "transform .15s ease, box-shadow .15s ease",
-
                                           WebkitPrintColorAdjust:
                                             "exact",
                                           printColorAdjust:
@@ -780,7 +1146,7 @@ export default function WeekPlanner({
                                             : "📢 OPEN DIENST"}
                                         </div>
 
-                                        {/* STATUS */}
+                                        {/* PLANNING STATUS */}
 
                                         <div
                                           style={{
@@ -793,6 +1159,122 @@ export default function WeekPlanner({
                                               item.status
                                             }
                                           />
+                                        </div>
+
+                                        {/* UREN */}
+
+                                        <div
+                                          style={{
+                                            marginTop:
+                                              "8px",
+                                            paddingTop:
+                                              "7px",
+                                            borderTop:
+                                              "1px solid rgba(148,163,184,.25)",
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              display:
+                                                "flex",
+                                              justifyContent:
+                                                "space-between",
+                                              alignItems:
+                                                "center",
+                                              gap:
+                                                "5px",
+                                            }}
+                                          >
+                                            <span
+                                              style={{
+                                                fontSize:
+                                                  "11px",
+                                                fontWeight:
+                                                  "700",
+                                                color:
+                                                  "#475569",
+                                              }}
+                                            >
+                                              ⏱️ Uren
+                                            </span>
+
+                                            <span
+                                              style={{
+                                                fontSize:
+                                                  "11px",
+                                                fontWeight:
+                                                  "800",
+                                                color:
+                                                  urenAantal
+                                                    ? "#0f172a"
+                                                    : "#94a3b8",
+                                              }}
+                                            >
+                                              {urenAantal ||
+                                                "—"}
+                                            </span>
+                                          </div>
+
+                                          {uren && (
+                                            <div
+                                              style={{
+                                                marginTop:
+                                                  "5px",
+                                                fontSize:
+                                                  "10px",
+                                                color:
+                                                  "#64748b",
+                                              }}
+                                            >
+                                              {formatTijd(
+                                                uren.starttijd
+                                              )}{" "}
+                                              →{" "}
+                                              {formatTijd(
+                                                uren.eindtijd
+                                              )}
+
+                                              {uren.pauze_minuten !=
+                                                null &&
+                                                ` • ${uren.pauze_minuten} min pauze`}
+                                            </div>
+                                          )}
+
+                                          <div
+                                            style={{
+                                              display:
+                                                "inline-flex",
+                                              alignItems:
+                                                "center",
+                                              gap:
+                                                "4px",
+                                              marginTop:
+                                                "5px",
+                                              padding:
+                                                "3px 6px",
+                                              borderRadius:
+                                                "999px",
+                                              background:
+                                                urenInfo.background,
+                                              color:
+                                                urenInfo.color,
+                                              border:
+                                                `1px solid ${urenInfo.border}`,
+                                              fontSize:
+                                                "9px",
+                                              fontWeight:
+                                                "800",
+                                              whiteSpace:
+                                                "nowrap",
+                                            }}
+                                          >
+                                            {
+                                              urenInfo.icon
+                                            }{" "}
+                                            {
+                                              urenInfo.tekst
+                                            }
+                                          </div>
                                         </div>
                                       </button>
                                     );
@@ -840,7 +1322,6 @@ export default function WeekPlanner({
               "#64748b",
             fontSize:
               "12px",
-
             WebkitPrintColorAdjust:
               "exact",
             printColorAdjust:
@@ -865,7 +1346,19 @@ export default function WeekPlanner({
           </span>
 
           <span>
-            🟢 Goedgekeurd
+            ⚪ Geen uren
+          </span>
+
+          <span>
+            🟠 Uren ingediend
+          </span>
+
+          <span>
+            🟢 Uren goedgekeurd
+          </span>
+
+          <span>
+            🔴 Uren afgekeurd
           </span>
 
           <span>

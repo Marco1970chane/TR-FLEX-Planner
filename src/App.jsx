@@ -1,14 +1,22 @@
+// src/App.jsx
+
 import "./App.css";
 
 import { Routes, Route } from "react-router-dom";
 
 import Layout from "./layout/Layout";
 
-// Beveiliging
+// ============================================================
+// BEVEILIGING
+// ============================================================
+
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import RoleGuard from "./components/auth/RoleGuard";
 
-// Pagina's
+// ============================================================
+// PAGINA'S
+// ============================================================
+
 import Login from "./pages/Auth/Login";
 import SetPassword from "./pages/Auth/SetPassword";
 
@@ -28,29 +36,45 @@ import MijnToolboxen from "./pages/MijnToolboxen";
 import ToolboxVragen from "./pages/ToolboxVragen";
 import ImportExport from "./pages/ImportExport";
 
+// ============================================================
+// NIEUW
+// ZZP FACTUREN
+// ============================================================
+
+import ZZPFacturen from "./pages/ZZPFacturen";
+
+// ============================================================
+// APP
+// ============================================================
 
 export default function App() {
   return (
     <Routes>
-      {/* ===========================
-          Publieke routes
-      ============================ */}
+      {/* ======================================================
+          PUBLIEKE ROUTES
+      ======================================================= */}
 
-      <Route path="/login" element={<Login />} />
+      {/* Login */}
+      <Route
+        path="/login"
+        element={<Login />}
+      />
 
+      {/* Wachtwoord instellen */}
       <Route
         path="/set-password"
         element={<SetPassword />}
       />
 
+      {/* Reageren op open dienst */}
       <Route
         path="/reageren/:token"
         element={<Reageren />}
       />
 
-      {/* ===========================
-          Beveiligde applicatie
-      ============================ */}
+      {/* ======================================================
+          BEVEILIGDE APPLICATIE
+      ======================================================= */}
 
       <Route
         element={
@@ -59,19 +83,28 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        {/* Dashboard */}
+        {/* ====================================================
+            DASHBOARD
+        ===================================================== */}
+
         <Route
           path="/"
           element={<Dashboard />}
         />
 
-        {/* Planning */}
+        {/* ====================================================
+            PLANNING
+        ===================================================== */}
+
         <Route
           path="/planning"
           element={<Planning />}
         />
 
-        {/* Jaarplanner */}
+        {/* ====================================================
+            JAARPLANNER
+        ===================================================== */}
+
         <Route
           path="/jaarplanner"
           element={
@@ -87,7 +120,10 @@ export default function App() {
           }
         />
 
-        {/* Medewerkers */}
+        {/* ====================================================
+            MEDEWERKERS
+        ===================================================== */}
+
         <Route
           path="/medewerkers"
           element={
@@ -104,7 +140,10 @@ export default function App() {
           }
         />
 
-        {/* Toolboxen */}
+        {/* ====================================================
+            TOOLBOXEN
+        ===================================================== */}
+
         <Route
           path="/toolboxen"
           element={
@@ -122,7 +161,10 @@ export default function App() {
           }
         />
 
-        {/* Mijn Toolboxen */}
+        {/* ====================================================
+            MIJN TOOLBOXEN
+        ===================================================== */}
+
         <Route
           path="/mijntoolboxen"
           element={
@@ -139,32 +181,45 @@ export default function App() {
             </RoleGuard>
           }
         />
-        <Route
-  path="/toolboxvragen"
-  element={
-    <RoleGuard
-      roles={[
-        "admin",
-        "operations",
-        "hr",
-      ]}
-    >
-      <ToolboxVragen />
-    </RoleGuard>
-  }
-/>
 
-        {/* Gebruikersbeheer */}
+        {/* ====================================================
+            TOOLBOX VRAGEN
+        ===================================================== */}
+
+        <Route
+          path="/toolboxvragen"
+          element={
+            <RoleGuard
+              roles={[
+                "admin",
+                "operations",
+                "hr",
+              ]}
+            >
+              <ToolboxVragen />
+            </RoleGuard>
+          }
+        />
+
+        {/* ====================================================
+            GEBRUIKERSBEHEER
+        ===================================================== */}
+
         <Route
           path="/gebruikers"
           element={
-            <RoleGuard roles={["admin"]}>
+            <RoleGuard
+              roles={["admin"]}
+            >
               <Gebruikers />
             </RoleGuard>
           }
         />
 
-        {/* Terminals */}
+        {/* ====================================================
+            TERMINALS
+        ===================================================== */}
+
         <Route
           path="/terminals"
           element={
@@ -179,7 +234,10 @@ export default function App() {
           }
         />
 
-        {/* Urenregistratie */}
+        {/* ====================================================
+            URENREGISTRATIE
+        ===================================================== */}
+
         <Route
           path="/urenregistratie"
           element={
@@ -194,22 +252,48 @@ export default function App() {
             </RoleGuard>
           }
         />
-        <Route
-  path="/import-export"
-  element={
-    <RoleGuard
-      roles={[
-        "admin",
-        "operations",
-        "planner",
-      ]}
-    >
-      <ImportExport />
-    </RoleGuard>
-  }
-/>
 
-        {/* Open diensten */}
+        {/* ====================================================
+            ZZP FACTUREN
+        ===================================================== */}
+
+        <Route
+          path="/zzp-facturen"
+          element={
+            <RoleGuard
+              roles={[
+                "admin",
+                "operations",
+              ]}
+            >
+              <ZZPFacturen />
+            </RoleGuard>
+          }
+        />
+
+        {/* ====================================================
+            IMPORT / EXPORT
+        ===================================================== */}
+
+        <Route
+          path="/import-export"
+          element={
+            <RoleGuard
+              roles={[
+                "admin",
+                "operations",
+                "planner",
+              ]}
+            >
+              <ImportExport />
+            </RoleGuard>
+          }
+        />
+
+        {/* ====================================================
+            OPEN DIENSTEN
+        ===================================================== */}
+
         <Route
           path="/opendiensten"
           element={
@@ -226,7 +310,10 @@ export default function App() {
           }
         />
 
-        {/* Certificaten */}
+        {/* ====================================================
+            CERTIFICATEN
+        ===================================================== */}
+
         <Route
           path="/certificaten"
           element={
@@ -242,7 +329,10 @@ export default function App() {
           }
         />
 
-        {/* Rapportages */}
+        {/* ====================================================
+            RAPPORTAGES
+        ===================================================== */}
+
         <Route
           path="/rapportages"
           element={
@@ -258,21 +348,65 @@ export default function App() {
         />
       </Route>
 
-      {/* ===========================
+      {/* ======================================================
           404
-      ============================ */}
+      ======================================================= */}
 
       <Route
         path="*"
         element={
           <div
             style={{
-              padding: "40px",
-              textAlign: "center",
-              fontSize: "22px",
+              minHeight:
+                "100vh",
+              display:
+                "flex",
+              alignItems:
+                "center",
+              justifyContent:
+                "center",
+              padding:
+                "40px",
+              textAlign:
+                "center",
+              fontSize:
+                "22px",
+              color:
+                "#334155",
+              background:
+                "#f8fafc",
             }}
           >
-            Pagina niet gevonden
+            <div>
+              <div
+                style={{
+                  fontSize:
+                    "50px",
+                  marginBottom:
+                    "15px",
+                }}
+              >
+                ❓
+              </div>
+
+              <strong>
+                Pagina niet gevonden
+              </strong>
+
+              <div
+                style={{
+                  marginTop:
+                    "8px",
+                  fontSize:
+                    "14px",
+                  color:
+                    "#64748b",
+                }}
+              >
+                De opgevraagde pagina
+                bestaat niet.
+              </div>
+            </div>
           </div>
         }
       />

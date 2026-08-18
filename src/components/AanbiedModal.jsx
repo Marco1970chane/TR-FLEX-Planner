@@ -9,12 +9,15 @@ export default function AanbiedModal({
 }) {
   const [medewerkers, setMedewerkers] = useState([]);
   const [geselecteerd, setGeselecteerd] = useState([]);
+  const [zoekterm, setZoekterm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [versturenLoading, setVersturenLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
       laadMedewerkers();
       setGeselecteerd([]);
+      setZoekterm("");
     }
   }, [open]);
 
@@ -27,34 +30,42 @@ export default function AanbiedModal({
       .eq("status", "Beschikbaar")
       .order("naam");
 
-    if (!error) {
-      setMedewerkers(data || []);
+    if (error) {
+      console.error("Fout bij laden medewerkers:", error);
+      alert("Medewerkers konden niet worden geladen.");
+      setMedewerkers([]);
     } else {
-      console.error(error);
+      setMedewerkers(data || []);
     }
 
     setLoading(false);
   }
 
   function toggleMedewerker(naam) {
-    if (geselecteerd.includes(naam)) {
-      setGeselecteerd(
-        geselecteerd.filter((m) => m !== naam)
-      );
-    } else {
-      setGeselecteerd([...geselecteerd, naam]);
-    }
+    setGeselecteerd((vorig) => {
+      if (vorig.includes(naam)) {
+        return vorig.filter((m) => m !== naam);
+      }
+
+      return [...vorig, naam];
+    });
   }
 
   function allesSelecteren() {
     setGeselecteerd(
-      medewerkers.map((m) => m.naam)
+      gefilterdeMedewerkers.map((m) => m.naam)
     );
   }
 
   function allesDeselecteren() {
     setGeselecteerd([]);
   }
+
+  const gefilterdeMedewerkers = medewerkers.filter((medewerker) =>
+    (medewerker.naam || "")
+      .toLowerCase()
+      .includes(zoekterm.toLowerCase())
+  );
 
   async function versturen() {
     if (!dienst) return;
@@ -64,32 +75,69 @@ export default function AanbiedModal({
       return;
     }
 
-   for (const medewerker of medewerkers.filter((m) =>
-  geselecteerd.includes(m.naam)
-)) {
+    setVersturenLoading(true);
 
-  const token = crypto.randomUUID();
+    let aantalVerzonden = 0;
 
-  const { error } = await supabase
-    .from("dienst_aanbiedingen")
-    .insert({
-      planning_id: dienst.id,
-      medewerker: medewerker.naam,
-      telefoon: medewerker.telefoon,
-      token,
-      status: "Verzonden",
-      verzonden_op: new Date().toISOString(),
-    });
+    try {
+      for (const medewerker of medewerkers.filter((m) =>
+        geselecteerd.includes(m.naam)
+      )) {
+        /*
+         * Controleer eerst of deze medewerker
+         * deze dienst al aangeboden heeft gekregen.
+         */
+        const { data: bestaande, error: controleError } =
+          await supabase
+            .from("dienst_aanbiedingen")
+            .select("id, status")
+            .eq("planning_id", dienst.id)
+            .eq("medewerker", medewerker.naam)
+            .maybeSingle();
 
-  if (error) {
-    console.error(error);
-    continue;
-  }
+        if (controleError) {
+          console.error(
+            "Fout bij controleren bestaande aanbieding:",
+            controleError
+          );
+        }
 
-  const link =
-    `https://tr-flex-planner.vercel.app/reageren/${token}`;
+        /*
+         * Bestaat er al een aanbieding?
+         * Dan slaan we deze medewerker over.
+         */
+        if (bestaande) {
+          console.log(
+            `Dienst is al aangeboden aan ${medewerker.naam}`
+          );
+          continue;
+        }
 
-  const bericht = `Hallo ${medewerker.naam},
+        const token = crypto.randomUUID();
+
+        const { error } = await supabase
+          .from("dienst_aanbiedingen")
+          .insert({
+            planning_id: dienst.id,
+            medewerker: medewerker.naam,
+            telefoon: medewerker.telefoon || "",
+            token,
+            status: "Verzonden",
+            verzonden_op: new Date().toISOString(),
+          });
+
+        if (error) {
+          console.error(
+            `Fout bij aanbieden aan ${medewerker.naam}:`,
+            error
+          );
+          continue;
+        }
+
+        const link =
+          `https://tr-flex-planner.vercel.app/reageren/${token}`;
+
+        const bericht = `Hallo ${medewerker.naam},
 
 Er is een open dienst beschikbaar.
 
@@ -103,107 +151,233 @@ ${link}
 
 Terminal Recruiters`;
 
-  const telefoon =
-    (medewerker.telefoon || "").replace(/\D/g, "");
+        const telefoon =
+          (medewerker.telefoon || "").replace(/\D/g, "");
 
-  if (telefoon) {
-    window.open(
-      `https://wa.me/${telefoon}?text=${encodeURIComponent(
-        bericht
-      )}`,
-      "_blank"
-    );
-  }
- }
+        if (telefoon) {
+          window.open(
+            `https://wa.me/${telefoon}?text=${encodeURIComponent(
+              bericht
+            )}`,
+            "_blank"
+          );
+        }
 
-    alert("De dienst is aangeboden.");
+        aantalVerzonden++;
+      }
 
-    if (onVerzonden) {
-      onVerzonden();
+      if (aantalVerzonden === 0) {
+        alert(
+          "Geen nieuwe aanbiedingen verzonden. Mogelijk waren deze medewerkers al aangeboden."
+        );
+      } else {
+        alert(
+          `${aantalVerzonden} dienstaanbieding(en) verzonden.`
+        );
+      }
+
+      if (onVerzonden) {
+        onVerzonden();
+      }
+
+      onClose();
+    } catch (error) {
+      console.error("Onverwachte fout:", error);
+      alert(
+        "Er is een onverwachte fout opgetreden bij het aanbieden van de dienst."
+      );
+    } finally {
+      setVersturenLoading(false);
     }
-
-    onClose();
   }
 
-  if (!open || !dienst) return null;
+  if (!open || !dienst) {
+    return null;
+  }
 
   return (
     <div className="modal-overlay">
       <div className="modal">
-        <h2>📢 Dienst aanbieden</h2>
 
+        {/* HEADER */}
+        <div className="modal-header">
+          <div>
+            <h2>📢 Dienst aanbieden</h2>
+            <p className="modal-subtitle">
+              Selecteer de medewerkers aan wie je deze dienst wilt aanbieden.
+            </p>
+          </div>
+
+          <button
+            className="modal-close"
+            onClick={onClose}
+            type="button"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* DIENST INFORMATIE */}
         <div className="modal-info">
-          <p>
-            <strong>Datum:</strong> {dienst.datum}
-          </p>
 
-          <p>
-            <strong>Dienst:</strong> {dienst.dienst}
-          </p>
+          <div className="info-item">
+            <span>📅</span>
+            <div>
+              <small>Datum</small>
+              <strong>{dienst.datum || "-"}</strong>
+            </div>
+          </div>
 
-          <p>
-            <strong>Terminal:</strong> {dienst.terminal}
-          </p>
+          <div className="info-item">
+            <span>🕒</span>
+            <div>
+              <small>Dienst</small>
+              <strong>{dienst.dienst || "-"}</strong>
+            </div>
+          </div>
+
+          <div className="info-item">
+            <span>📍</span>
+            <div>
+              <small>Terminal</small>
+              <strong>{dienst.terminal || "-"}</strong>
+            </div>
+          </div>
+
         </div>
 
         <hr />
 
+        {/* ZOEKEN */}
+        <div className="modal-search">
+          <input
+            type="text"
+            placeholder="🔎 Zoek medewerker..."
+            value={zoekterm}
+            onChange={(e) => setZoekterm(e.target.value)}
+          />
+        </div>
+
+        {/* SELECTIE KNOPPEN */}
+        <div className="select-buttons">
+          <button
+            type="button"
+            onClick={allesSelecteren}
+          >
+            ☑ Alles selecteren
+          </button>
+
+          <button
+            type="button"
+            onClick={allesDeselecteren}
+          >
+            ☐ Alles wissen
+          </button>
+        </div>
+
+        {/* MEDEWERKERS */}
         {loading ? (
-          <p>Medewerkers laden...</p>
+          <div className="modal-loading">
+            <p>⏳ Medewerkers laden...</p>
+          </div>
         ) : (
           <>
             <div className="modal-list">
-              {medewerkers.length === 0 && (
-                <p>Geen beschikbare medewerkers.</p>
+
+              {gefilterdeMedewerkers.length === 0 && (
+                <div className="empty-state">
+                  <span>👤</span>
+                  <p>
+                    {zoekterm
+                      ? "Geen medewerkers gevonden."
+                      : "Geen beschikbare medewerkers."}
+                  </p>
+                </div>
               )}
 
-              {medewerkers.map((m) => (
-                <label
-                  key={m.id}
-                  className="modal-medewerker"
-                >
-                  <input
-                    type="checkbox"
-                    checked={geselecteerd.includes(m.naam)}
-                    onChange={() =>
-                      toggleMedewerker(m.naam)
-                    }
-                  />
+              {gefilterdeMedewerkers.map((medewerker) => {
+                const geselecteerdDeze =
+                  geselecteerd.includes(medewerker.naam);
 
-                  <span>{m.naam}</span>
-                </label>
-              ))}
+                return (
+                  <label
+                    key={medewerker.id}
+                    className={`modal-medewerker ${
+                      geselecteerdDeze
+                        ? "selected"
+                        : ""
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={geselecteerdDeze}
+                      onChange={() =>
+                        toggleMedewerker(
+                          medewerker.naam
+                        )
+                      }
+                    />
+
+                    <span className="medewerker-status">
+                      ●
+                    </span>
+
+                    <span className="medewerker-naam">
+                      {medewerker.naam}
+                    </span>
+
+                    {medewerker.telefoon && (
+                      <span className="medewerker-telefoon">
+                        {medewerker.telefoon}
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+
             </div>
 
-            <p>
+            {/* SELECTIE TELLER */}
+            <div className="selection-counter">
               <strong>
-                Geselecteerd:
+                {geselecteerd.length}
               </strong>{" "}
-              {geselecteerd.length}
-            </p>
+              medewerker
+              {geselecteerd.length !== 1
+                ? "s"
+                : ""}{" "}
+              geselecteerd
+            </div>
 
+            {/* ACTIES */}
             <div className="modal-buttons">
-              <button onClick={allesSelecteren}>
-                Alles selecteren
-              </button>
 
-              <button onClick={allesDeselecteren}>
-                Alles wissen
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={versturenLoading}
+              >
+                Sluiten
               </button>
 
               <button
+                type="button"
                 className="new-btn"
                 onClick={versturen}
+                disabled={
+                  versturenLoading ||
+                  geselecteerd.length === 0
+                }
               >
-                📱 WhatsApp openen
+                {versturenLoading
+                  ? "⏳ Bezig..."
+                  : `📱 WhatsApp openen (${geselecteerd.length})`}
               </button>
 
-              <button onClick={onClose}>
-                Sluiten
-              </button>
             </div>
           </>
         )}
+
       </div>
     </div>
   );

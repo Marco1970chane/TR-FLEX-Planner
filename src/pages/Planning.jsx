@@ -64,6 +64,7 @@ export default function Planning() {
 
   // ==========================================
   // PLANNING LADEN
+  // + URENREGISTRATIE KOPPELEN
   // ==========================================
 
   useEffect(() => {
@@ -75,38 +76,179 @@ export default function Planning() {
   async function laadPlanning() {
     setLaden(true);
 
-    let query = supabase
-      .from("planning")
-      .select("*")
-      .order("datum", {
-        ascending: true,
-      });
+    try {
+      // ========================================
+      // PLANNING OPHALEN
+      // ========================================
 
-    if (profile?.rol === "medewerker") {
-      query = query.eq(
-        "medewerker",
-        profile.naam
+      let query = supabase
+        .from("planning")
+        .select("*")
+        .order("datum", {
+          ascending: true,
+        });
+
+      // Medewerker ziet alleen eigen planning
+      if (profile?.rol === "medewerker") {
+        query = query.eq(
+          "medewerker",
+          profile.naam
+        );
+      }
+
+      const {
+        data: planningData,
+        error: planningError,
+      } = await query;
+
+      if (planningError) {
+        throw planningError;
+      }
+
+      const planningLijst =
+        planningData || [];
+
+      // ========================================
+      // ALS ER GEEN PLANNING IS
+      // ========================================
+
+      if (planningLijst.length === 0) {
+        setPlanning([]);
+        setLaden(false);
+        return;
+      }
+
+      // ========================================
+      // PLANNING ID'S VERZAMELEN
+      // ========================================
+
+      const planningIds = [
+        ...new Set(
+          planningLijst
+            .map((p) => p.id)
+            .filter(Boolean)
+        ),
+      ];
+
+      // ========================================
+      // URENREGISTRATIES OPHALEN
+      // ========================================
+
+      let urenData = [];
+
+      if (planningIds.length > 0) {
+        const {
+          data,
+          error: urenError,
+        } = await supabase
+          .from("urenregistratie")
+          .select("*")
+          .in(
+            "planning_id",
+            planningIds
+          )
+          .order("ingediend_op", {
+            ascending: false,
+          });
+
+        if (urenError) {
+          console.error(
+            "Fout bij laden urenregistratie:",
+            urenError
+          );
+        } else {
+          urenData = data || [];
+        }
+      }
+
+      // ========================================
+      // UREN AAN PLANNING KOPPELEN
+      // ========================================
+
+      const compleet = planningLijst.map(
+        (dienst) => {
+          // Zoek alle urenregistraties
+          // van deze planning
+          const registraties =
+            urenData.filter(
+              (u) =>
+                String(
+                  u.planning_id
+                ) ===
+                String(dienst.id)
+            );
+
+          // Nieuwste registratie gebruiken
+          const urenregistratie =
+            registraties.length > 0
+              ? registraties[0]
+              : null;
+
+          return {
+            ...dienst,
+
+            // ==================================
+            // URENINFORMATIE
+            // ==================================
+
+            urenregistratie_id:
+              urenregistratie?.id ||
+              null,
+
+            uren_status:
+              urenregistratie?.status ||
+              null,
+
+            gewerkte_uren:
+              urenregistratie?.gewerkte_uren ||
+              0,
+
+            starttijd:
+              urenregistratie?.starttijd ||
+              null,
+
+            eindtijd:
+              urenregistratie?.eindtijd ||
+              null,
+
+            pauze_minuten:
+              urenregistratie?.pauze_minuten ||
+              0,
+
+            uren_opmerking:
+              urenregistratie?.opmerking ||
+              null,
+
+            uren_ingediend_op:
+              urenregistratie?.ingediend_op ||
+              null,
+
+            uren_goedgekeurd_op:
+              urenregistratie?.goedgekeurd_op ||
+              null,
+
+            // Handig voor eventuele
+            // toekomstige uitbreidingen
+            urenregistratie:
+              urenregistratie || null,
+          };
+        }
       );
-    }
 
-    const {
-      data,
-      error,
-    } = await query;
-
-    if (error) {
+      setPlanning(compleet);
+    } catch (error) {
       console.error(
         "Fout bij laden planning:",
         error
       );
 
-      alert(error.message);
+      alert(
+        error.message ||
+          "De planning kon niet worden geladen."
+      );
+    } finally {
       setLaden(false);
-      return;
     }
-
-    setPlanning(data || []);
-    setLaden(false);
   }
 
   // ==========================================
@@ -144,7 +286,8 @@ export default function Planning() {
     const style =
       document.createElement("style");
 
-    style.id = "planning-print-style";
+    style.id =
+      "planning-print-style";
 
     style.innerHTML = `
       @media print {
@@ -362,12 +505,19 @@ export default function Planning() {
           p.datum || ""
         ).toLowerCase();
 
+      // Ook zoeken op urenstatus
+      const urenStatus =
+        (
+          p.uren_status || ""
+        ).toLowerCase();
+
       return (
         medewerker.includes(zoek) ||
         terminal.includes(zoek) ||
         status.includes(zoek) ||
         dienst.includes(zoek) ||
-        datum.includes(zoek)
+        datum.includes(zoek) ||
+        urenStatus.includes(zoek)
       );
     });
 
@@ -514,6 +664,23 @@ export default function Planning() {
             >
               🖨️ Print planning
             </button>
+
+            {/* VERNIEUWEN */}
+
+            <button
+              type="button"
+              className="new-btn"
+              style={{
+                background:
+                  "#475569",
+              }}
+              onClick={
+                laadPlanning
+              }
+              disabled={laden}
+            >
+              🔄 Vernieuwen
+            </button>
           </div>
 
           <div
@@ -607,7 +774,7 @@ export default function Planning() {
 
       {/* ====================================
           NIEUW / BEWERKEN MODAL
-      ===================================== */}
+      ==================================== */}
 
       {magBeheren &&
         toonForm && (

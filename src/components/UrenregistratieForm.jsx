@@ -9,44 +9,51 @@ export default function UrenregistratieForm({
   onCancel,
 }) {
   const [medewerkers, setMedewerkers] = useState([]);
-  const [terminals, setTerminals] = useState([]);
+  const [planningen, setPlanningen] = useState([]);
+
   const [opslaanBezig, setOpslaanBezig] =
     useState(false);
+
+  const [laden, setLaden] =
+    useState(true);
 
   const vandaag = new Date()
     .toISOString()
     .split("T")[0];
 
   const leegFormulier = {
+    planning_id: "",
     datum: vandaag,
     medewerker: "",
-    terminal: "",
-    begintijd: "",
+    starttijd: "",
     eindtijd: "",
-    pauze: 30,
-    uren: 0,
-    status: "Open",
+    pauze_minuten: 30,
+    gewerkte_uren: 0,
+    opmerking: "",
+    status: "Ingediend",
   };
 
   const [formulier, setFormulier] =
     useState(leegFormulier);
 
-  // ==========================================
-  // MEDEWERKERS + TERMINALS
-  // ==========================================
+  // ============================================================
+  // INIT
+  // ============================================================
 
   useEffect(() => {
-    laadMedewerkers();
-    laadTerminals();
+    laadGegevens();
   }, []);
 
-  // ==========================================
-  // BESTAANDE REGISTRATIE INLADEN
-  // ==========================================
+  // ============================================================
+  // BESTAANDE REGISTRATIE LADEN
+  // ============================================================
 
   useEffect(() => {
     if (registratie?.id) {
       setFormulier({
+        planning_id:
+          registratie.planning_id || "",
+
         datum:
           registratie.datum ||
           vandaag,
@@ -55,31 +62,33 @@ export default function UrenregistratieForm({
           registratie.medewerker ||
           "",
 
-        terminal:
-          registratie.terminal ||
-          "",
-
-        begintijd:
-          registratie.begintijd ||
-          "",
+        starttijd:
+          formatTijd(
+            registratie.starttijd
+          ),
 
         eindtijd:
-          registratie.eindtijd ||
+          formatTijd(
+            registratie.eindtijd
+          ),
+
+        pauze_minuten:
+          Number(
+            registratie.pauze_minuten || 0
+          ),
+
+        gewerkte_uren:
+          Number(
+            registratie.gewerkte_uren || 0
+          ),
+
+        opmerking:
+          registratie.opmerking ||
           "",
-
-        pauze:
-          Number(
-            registratie.pauze || 0
-          ),
-
-        uren:
-          Number(
-            registratie.uren || 0
-          ),
 
         status:
           registratie.status ||
-          "Open",
+          "Ingediend",
       });
     } else {
       setFormulier({
@@ -89,53 +98,65 @@ export default function UrenregistratieForm({
     }
   }, [registratie]);
 
-  // ==========================================
-  // MEDEWERKERS
-  // ==========================================
+  // ============================================================
+  // GEGEVENS LADEN
+  // ============================================================
 
-  async function laadMedewerkers() {
-    const { data, error } =
-      await supabase
-        .from("medewerkers")
-        .select("id, naam")
-        .order("naam");
+  async function laadGegevens() {
+    setLaden(true);
 
-    if (error) {
+    try {
+      const [
+        medewerkersResult,
+        planningResult,
+      ] = await Promise.all([
+        supabase
+          .from("medewerkers")
+          .select("id, naam")
+          .order("naam"),
+
+        supabase
+          .from("planning")
+          .select("*")
+          .order("datum", {
+            ascending: false,
+          }),
+      ]);
+
+      if (medewerkersResult.error) {
+        console.error(
+          "Fout medewerkers:",
+          medewerkersResult.error
+        );
+      } else {
+        setMedewerkers(
+          medewerkersResult.data || []
+        );
+      }
+
+      if (planningResult.error) {
+        console.error(
+          "Fout planning:",
+          planningResult.error
+        );
+      } else {
+        setPlanningen(
+          planningResult.data || []
+        );
+      }
+    } catch (error) {
       console.error(
-        "Fout bij laden medewerkers:",
+        "Fout bij laden gegevens:",
         error
       );
-      return;
+    } finally {
+      setLaden(false);
     }
-
-    setMedewerkers(data || []);
   }
 
-  // ==========================================
-  // TERMINALS
-  // ==========================================
-
-  async function laadTerminals() {
-    const { data, error } =
-      await supabase
-        .from("terminals")
-        .select("id, naam")
-        .order("naam");
-
-    if (error) {
-      console.error(
-        "Fout bij laden terminals:",
-        error
-      );
-      return;
-    }
-
-    setTerminals(data || []);
-  }
-
-  // ==========================================
+  // ============================================================
   // UREN BEREKENEN
-  // ==========================================
+  // ============================================================
 
   function berekenUren(
     van,
@@ -146,11 +167,19 @@ export default function UrenregistratieForm({
       return 0;
     }
 
-    const [startUur, startMinuut] =
-      van.split(":").map(Number);
+    const [
+      startUur,
+      startMinuut,
+    ] = van
+      .split(":")
+      .map(Number);
 
-    const [eindUur, eindMinuut] =
-      tot.split(":").map(Number);
+    const [
+      eindUur,
+      eindMinuut,
+    ] = tot
+      .split(":")
+      .map(Number);
 
     let start =
       startUur * 60 +
@@ -165,24 +194,28 @@ export default function UrenregistratieForm({
       einde += 24 * 60;
     }
 
-    let totaalMinuten =
-      einde - start;
-
-    totaalMinuten -=
+    const pauzeMinuten =
       Number(pauze) || 0;
 
-    if (totaalMinuten < 0) {
-      totaalMinuten = 0;
+    const totaalMinuten =
+      einde -
+      start -
+      pauzeMinuten;
+
+    if (totaalMinuten <= 0) {
+      return 0;
     }
 
     return Number(
-      (totaalMinuten / 60).toFixed(2)
+      (
+        totaalMinuten / 60
+      ).toFixed(2)
     );
   }
 
-  // ==========================================
-  // DUUR ZONDER PAUZE
-  // ==========================================
+  // ============================================================
+  // TOTALE DUUR
+  // ============================================================
 
   function berekenDuurMinuten(
     van,
@@ -192,11 +225,19 @@ export default function UrenregistratieForm({
       return 0;
     }
 
-    const [startUur, startMinuut] =
-      van.split(":").map(Number);
+    const [
+      startUur,
+      startMinuut,
+    ] = van
+      .split(":")
+      .map(Number);
 
-    const [eindUur, eindMinuut] =
-      tot.split(":").map(Number);
+    const [
+      eindUur,
+      eindMinuut,
+    ] = tot
+      .split(":")
+      .map(Number);
 
     let start =
       startUur * 60 +
@@ -213,9 +254,9 @@ export default function UrenregistratieForm({
     return einde - start;
   }
 
-  // ==========================================
+  // ============================================================
   // FORMULIER WIJZIGEN
-  // ==========================================
+  // ============================================================
 
   function wijzig(e) {
     const {
@@ -231,20 +272,44 @@ export default function UrenregistratieForm({
         };
 
         if (
-          name === "pauze"
+          name === "pauze_minuten"
         ) {
-          nieuw.pauze =
+          nieuw.pauze_minuten =
             Math.max(
               0,
               Number(value) || 0
             );
         }
 
-        nieuw.uren =
+        if (
+          name === "planning_id"
+        ) {
+          const gekozenPlanning =
+            planningen.find(
+              (p) =>
+                String(p.id) ===
+                String(value)
+            );
+
+          if (gekozenPlanning) {
+            nieuw.datum =
+              gekozenPlanning.datum ||
+              nieuw.datum;
+
+            if (
+              gekozenPlanning.medewerker
+            ) {
+              nieuw.medewerker =
+                gekozenPlanning.medewerker;
+            }
+          }
+        }
+
+        nieuw.gewerkte_uren =
           berekenUren(
-            nieuw.begintijd,
+            nieuw.starttijd,
             nieuw.eindtijd,
-            nieuw.pauze
+            nieuw.pauze_minuten
           );
 
         return nieuw;
@@ -252,16 +317,21 @@ export default function UrenregistratieForm({
     );
   }
 
-  // ==========================================
-  // OPSLAAN / BIJWERKEN
-  // ==========================================
+  // ============================================================
+  // OPSLAAN
+  // ============================================================
 
   async function opslaan(e) {
     e.preventDefault();
 
-    if (
-      !formulier.medewerker
-    ) {
+    if (!formulier.planning_id) {
+      alert(
+        "Selecteer eerst een planning/dienst."
+      );
+      return;
+    }
+
+    if (!formulier.medewerker) {
       alert(
         "Selecteer een medewerker."
       );
@@ -269,33 +339,24 @@ export default function UrenregistratieForm({
     }
 
     if (
-      !formulier.terminal
-    ) {
-      alert(
-        "Selecteer een terminal."
-      );
-      return;
-    }
-
-    if (
-      !formulier.begintijd ||
+      !formulier.starttijd ||
       !formulier.eindtijd
     ) {
       alert(
-        "Vul de begin- en eindtijd in."
+        "Vul de starttijd en eindtijd in."
       );
       return;
     }
 
     const duurMinuten =
       berekenDuurMinuten(
-        formulier.begintijd,
+        formulier.starttijd,
         formulier.eindtijd
       );
 
     const pauzeMinuten =
       Number(
-        formulier.pauze
+        formulier.pauze_minuten
       ) || 0;
 
     if (duurMinuten <= 0) {
@@ -315,14 +376,14 @@ export default function UrenregistratieForm({
       return;
     }
 
-    const berekendeUren =
+    const gewerkteUren =
       berekenUren(
-        formulier.begintijd,
+        formulier.starttijd,
         formulier.eindtijd,
-        formulier.pauze
+        pauzeMinuten
       );
 
-    if (berekendeUren <= 0) {
+    if (gewerkteUren <= 0) {
       alert(
         "Het aantal gewerkte uren moet groter zijn dan 0."
       );
@@ -333,88 +394,92 @@ export default function UrenregistratieForm({
 
     try {
       const gegevens = {
+        planning_id:
+          formulier.planning_id,
+
         datum:
           formulier.datum,
 
         medewerker:
           formulier.medewerker,
 
-        terminal:
-          formulier.terminal,
-
-        begintijd:
-          formulier.begintijd,
+        starttijd:
+          formulier.starttijd,
 
         eindtijd:
           formulier.eindtijd,
 
-        pauze:
+        pauze_minuten:
           pauzeMinuten,
 
-        uren:
-          berekendeUren,
+        gewerkte_uren:
+          gewerkteUren,
 
-        // Bij bewerken bestaande status behouden.
-        // Bij nieuwe registratie wordt het Open.
+        opmerking:
+          formulier.opmerking.trim() ||
+          null,
+
         status:
           registratie?.id
             ? formulier.status ||
-              "Open"
-            : "Open",
+              "Ingediend"
+            : "Ingediend",
+
+        ingediend_op:
+          new Date().toISOString(),
       };
 
-      let error = null;
-
-      // ======================================
-      // BESTAANDE REGISTRATIE BIJWERKEN
-      // ======================================
+      // ========================================================
+      // BESTAANDE REGISTRATIE
+      // ========================================================
 
       if (registratie?.id) {
-        const result =
-          await supabase
-            .from(
-              "urenregistratie"
-            )
-            .update(gegevens)
-            .eq(
-              "id",
-              registratie.id
-            );
+        const {
+          error,
+        } = await supabase
+          .from(
+            "urenregistratie"
+          )
+          .update(gegevens)
+          .eq(
+            "id",
+            registratie.id
+          );
 
-        error =
-          result.error;
+        if (error) {
+          throw error;
+        }
+
+        alert(
+          "✅ Urenregistratie bijgewerkt."
+        );
       }
 
-      // ======================================
+      // ========================================================
       // NIEUWE REGISTRATIE
-      // ======================================
+      // ========================================================
 
       else {
-        const result =
-          await supabase
-            .from(
-              "urenregistratie"
-            )
-            .insert([
-              gegevens,
-            ]);
+        const {
+          error,
+        } = await supabase
+          .from(
+            "urenregistratie"
+          )
+          .insert(gegevens);
 
-        error =
-          result.error;
+        if (error) {
+          throw error;
+        }
+
+        alert(
+          "✅ Urenregistratie opgeslagen."
+        );
       }
 
-      if (error) {
-        throw error;
+      if (onSaved) {
+        onSaved();
       }
-
-      alert(
-        registratie?.id
-          ? "✅ Urenregistratie bijgewerkt."
-          : "✅ Urenregistratie opgeslagen."
-      );
-
-      onSaved?.();
-
     } catch (error) {
       console.error(
         "Fout bij opslaan:",
@@ -430,20 +495,33 @@ export default function UrenregistratieForm({
     }
   }
 
-  // ==========================================
+  // ============================================================
+  // GEKOZEN PLANNING
+  // ============================================================
+
+  const gekozenPlanning =
+    planningen.find(
+      (p) =>
+        String(p.id) ===
+        String(
+          formulier.planning_id
+        )
+    );
+
+  // ============================================================
   // BEREKENDE UREN
-  // ==========================================
+  // ============================================================
 
   const berekendeUren =
     berekenUren(
-      formulier.begintijd,
+      formulier.starttijd,
       formulier.eindtijd,
-      formulier.pauze
+      formulier.pauze_minuten
     );
 
-  // ==========================================
-  // WEERGAVE
-  // ==========================================
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
     <div>
@@ -458,246 +536,480 @@ export default function UrenregistratieForm({
           : "🕒 Nieuwe urenregistratie"}
       </h2>
 
-      <form
-        onSubmit={opslaan}
-        style={{
-          display: "flex",
-          flexDirection:
-            "column",
-          gap: "10px",
-        }}
-      >
-        {/* DATUM */}
-
-        <label>
-          Datum
-        </label>
-
-        <input
-          type="date"
-          name="datum"
-          value={
-            formulier.datum
-          }
-          onChange={wijzig}
-          required
-        />
-
-        {/* MEDEWERKER */}
-
-        <label>
-          Medewerker
-        </label>
-
-        <select
-          name="medewerker"
-          value={
-            formulier.medewerker
-          }
-          onChange={wijzig}
-          required
-        >
-          <option value="">
-            Kies medewerker...
-          </option>
-
-          {medewerkers.map(
-            (m) => (
-              <option
-                key={m.id}
-                value={m.naam}
-              >
-                {m.naam}
-              </option>
-            )
-          )}
-        </select>
-
-        {/* TERMINAL */}
-
-        <label>
-          Terminal
-        </label>
-
-        <select
-          name="terminal"
-          value={
-            formulier.terminal
-          }
-          onChange={wijzig}
-          required
-        >
-          <option value="">
-            Kies terminal...
-          </option>
-
-          {terminals.map(
-            (t) => (
-              <option
-                key={t.id}
-                value={t.naam}
-              >
-                {t.naam}
-              </option>
-            )
-          )}
-        </select>
-
-        {/* BEGINTIJD */}
-
-        <label>
-          Begintijd
-        </label>
-
-        <input
-          type="time"
-          name="begintijd"
-          value={
-            formulier.begintijd
-          }
-          onChange={wijzig}
-          required
-        />
-
-        {/* EINDTIJD */}
-
-        <label>
-          Eindtijd
-        </label>
-
-        <input
-          type="time"
-          name="eindtijd"
-          value={
-            formulier.eindtijd
-          }
-          onChange={wijzig}
-          required
-        />
-
-        {/* PAUZE */}
-
-        <label>
-          Pauze (minuten)
-        </label>
-
-        <input
-          type="number"
-          name="pauze"
-          min="0"
-          step="1"
-          value={
-            formulier.pauze
-          }
-          onChange={wijzig}
-        />
-
-        {/* BEREKENING */}
-
+      {laden ? (
         <div
           style={{
-            marginTop: "8px",
-            padding: "18px",
-            borderRadius: "12px",
-            background:
-              "#f0fdf4",
-            border:
-              "1px solid #bbf7d0",
+            padding: "30px",
+            textAlign: "center",
+            color: "#64748b",
           }}
         >
-          <div
-            style={{
-              color: "#64748b",
-              fontSize: "14px",
-            }}
-          >
-            🧮 Automatisch
-            berekende gewerkte
-            uren
-          </div>
+          ⏳ Gegevens laden...
+        </div>
+      ) : (
+        <form
+          onSubmit={opslaan}
+          style={{
+            display: "flex",
+            flexDirection:
+              "column",
+            gap: "10px",
+          }}
+        >
+          {/* ==================================================
+              PLANNING
+          =================================================== */}
 
-          <strong
-            style={{
-              display: "block",
-              marginTop: "5px",
-              fontSize: "28px",
-              color: "#15803d",
-            }}
+          <label
+            style={labelStyle}
           >
-            {Number(
-              berekendeUren
-            ).toFixed(2)}{" "}
-            uur
-          </strong>
+            Planning / dienst
+          </label>
 
-          {formulier.begintijd &&
-            formulier.eindtijd && (
+          <select
+            name="planning_id"
+            value={
+              formulier.planning_id
+            }
+            onChange={wijzig}
+            required
+            style={inputStyle}
+          >
+            <option value="">
+              Kies planning...
+            </option>
+
+            {planningen.map(
+              (p) => (
+                <option
+                  key={p.id}
+                  value={p.id}
+                >
+                  {p.datum || "-"} —{" "}
+                  {p.dienst || "-"} —{" "}
+                  {p.terminal || "-"}{" "}
+                  {p.medewerker
+                    ? `— ${p.medewerker}`
+                    : ""}
+                </option>
+              )
+            )}
+          </select>
+
+          {/* ==================================================
+              PLANNING INFO
+          =================================================== */}
+
+          {gekozenPlanning && (
+            <div
+              style={{
+                background:
+                  "#eff6ff",
+                border:
+                  "1px solid #bfdbfe",
+                borderRadius:
+                  "12px",
+                padding:
+                  "15px",
+                marginBottom:
+                  "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize:
+                    "13px",
+                  color:
+                    "#64748b",
+                  marginBottom:
+                    "5px",
+                }}
+              >
+                Geselecteerde dienst
+              </div>
+
+              <strong
+                style={{
+                  color:
+                    "#1e40af",
+                  fontSize:
+                    "16px",
+                }}
+              >
+                {gekozenPlanning.datum ||
+                  "-"}
+              </strong>
+
               <div
                 style={{
                   marginTop:
-                    "6px",
+                    "5px",
                   color:
-                    "#64748b",
-                  fontSize:
-                    "13px",
+                    "#334155",
                 }}
               >
-                {formulier.begintijd}
-                {" → "}
-                {
+                🕒{" "}
+                {gekozenPlanning.dienst ||
+                  "-"}
+              </div>
+
+              <div
+                style={{
+                  marginTop:
+                    "3px",
+                  color:
+                    "#334155",
+                }}
+              >
+                📍{" "}
+                {gekozenPlanning.terminal ||
+                  "-"}
+              </div>
+            </div>
+          )}
+
+          {/* ==================================================
+              DATUM
+          =================================================== */}
+
+          <label
+            style={labelStyle}
+          >
+            Datum
+          </label>
+
+          <input
+            type="date"
+            name="datum"
+            value={
+              formulier.datum
+            }
+            onChange={wijzig}
+            required
+            style={inputStyle}
+          />
+
+          {/* ==================================================
+              MEDEWERKER
+          =================================================== */}
+
+          <label
+            style={labelStyle}
+          >
+            Medewerker
+          </label>
+
+          <select
+            name="medewerker"
+            value={
+              formulier.medewerker
+            }
+            onChange={wijzig}
+            required
+            style={inputStyle}
+          >
+            <option value="">
+              Kies medewerker...
+            </option>
+
+            {medewerkers.map(
+              (m) => (
+                <option
+                  key={m.id}
+                  value={m.naam}
+                >
+                  {m.naam}
+                </option>
+              )
+            )}
+          </select>
+
+          {/* ==================================================
+              START / EINDE
+          =================================================== */}
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "1fr 1fr",
+              gap: "12px",
+            }}
+          >
+            <div>
+              <label
+                style={labelStyle}
+              >
+                Starttijd
+              </label>
+
+              <input
+                type="time"
+                name="starttijd"
+                value={
+                  formulier.starttijd
+                }
+                onChange={wijzig}
+                required
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label
+                style={labelStyle}
+              >
+                Eindtijd
+              </label>
+
+              <input
+                type="time"
+                name="eindtijd"
+                value={
                   formulier.eindtijd
                 }
-                {" • "}
-                {
-                  formulier.pauze
-                }{" "}
-                minuten pauze
-              </div>
-            )}
-        </div>
+                onChange={wijzig}
+                required
+                style={inputStyle}
+              />
+            </div>
+          </div>
 
-        {/* OPSLAAN */}
+          {/* ==================================================
+              PAUZE
+          =================================================== */}
 
-        <button
-          className="new-btn"
-          type="submit"
-          disabled={
-            opslaanBezig
-          }
-          style={{
-            marginTop: "10px",
-            background:
-              "#2563eb",
-            width: "100%",
-          }}
-        >
-          {opslaanBezig
-            ? "⏳ Opslaan..."
-            : registratie?.id
-            ? "💾 Wijzigingen opslaan"
-            : "💾 Opslaan"}
-        </button>
+          <label
+            style={labelStyle}
+          >
+            Pauze (minuten)
+          </label>
 
-        {/* ANNULEREN */}
+          <input
+            type="number"
+            name="pauze_minuten"
+            min="0"
+            step="5"
+            value={
+              formulier.pauze_minuten
+            }
+            onChange={wijzig}
+            style={inputStyle}
+          />
 
-        {onCancel && (
+          {/* ==================================================
+              BEREKENING
+          =================================================== */}
+
+          <div
+            style={{
+              marginTop: "8px",
+              padding: "18px",
+              borderRadius: "12px",
+              background:
+                "#f0fdf4",
+              border:
+                "1px solid #bbf7d0",
+            }}
+          >
+            <div
+              style={{
+                color:
+                  "#64748b",
+                fontSize:
+                  "14px",
+              }}
+            >
+              🧮 Automatisch
+              berekende gewerkte
+              uren
+            </div>
+
+            <strong
+              style={{
+                display: "block",
+                marginTop:
+                  "5px",
+                fontSize:
+                  "28px",
+                color:
+                  "#15803d",
+              }}
+            >
+              {Number(
+                berekendeUren
+              ).toFixed(2)}{" "}
+              uur
+            </strong>
+
+            {formulier.starttijd &&
+              formulier.eindtijd && (
+                <div
+                  style={{
+                    marginTop:
+                      "6px",
+                    color:
+                      "#64748b",
+                    fontSize:
+                      "13px",
+                  }}
+                >
+                  {
+                    formulier.starttijd
+                  }
+                  {" → "}
+                  {
+                    formulier.eindtijd
+                  }
+                  {" • "}
+                  {
+                    formulier.pauze_minuten
+                  }{" "}
+                  minuten pauze
+                </div>
+              )}
+          </div>
+
+          {/* ==================================================
+              OPMERKING
+          =================================================== */}
+
+          <label
+            style={labelStyle}
+          >
+            Opmerking
+          </label>
+
+          <textarea
+            name="opmerking"
+            value={
+              formulier.opmerking
+            }
+            onChange={wijzig}
+            rows="3"
+            placeholder="Eventuele bijzonderheden..."
+            style={{
+              ...inputStyle,
+              resize: "vertical",
+              fontFamily:
+                "Arial, Helvetica, sans-serif",
+            }}
+          />
+
+          {/* ==================================================
+              STATUS BIJ BEWERKEN
+          =================================================== */}
+
+          {registratie?.id && (
+            <>
+              <label
+                style={labelStyle}
+              >
+                Status
+              </label>
+
+              <select
+                name="status"
+                value={
+                  formulier.status
+                }
+                onChange={wijzig}
+                style={inputStyle}
+              >
+                <option value="Ingediend">
+                  🟠 Ingediend
+                </option>
+
+                <option value="Goedgekeurd">
+                  🟢 Goedgekeurd
+                </option>
+
+                <option value="Afgekeurd">
+                  🔴 Afgekeurd
+                </option>
+              </select>
+            </>
+          )}
+
+          {/* ==================================================
+              OPSLAAN
+          =================================================== */}
+
           <button
-            type="button"
             className="new-btn"
-            onClick={onCancel}
+            type="submit"
             disabled={
               opslaanBezig
             }
             style={{
+              marginTop: "10px",
               background:
-                "#64748b",
+                "#2563eb",
               width: "100%",
             }}
           >
-            Annuleren
+            {opslaanBezig
+              ? "⏳ Opslaan..."
+              : registratie?.id
+              ? "💾 Wijzigingen opslaan"
+              : "💾 Uren indienen"}
           </button>
-        )}
-      </form>
+
+          {/* ==================================================
+              ANNULEREN
+          =================================================== */}
+
+          {onCancel && (
+            <button
+              type="button"
+              className="new-btn"
+              onClick={onCancel}
+              disabled={
+                opslaanBezig
+              }
+              style={{
+                background:
+                  "#64748b",
+                width: "100%",
+              }}
+            >
+              Annuleren
+            </button>
+          )}
+        </form>
+      )}
     </div>
   );
 }
+
+// ============================================================
+// HULPFUNCTIES
+// ============================================================
+
+function formatTijd(tijd) {
+  if (!tijd) {
+    return "";
+  }
+
+  return String(tijd).substring(
+    0,
+    5
+  );
+}
+
+const labelStyle = {
+  fontWeight: "600",
+  color: "#374151",
+  fontSize: "14px",
+};
+
+const inputStyle = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "11px",
+  border:
+    "1px solid #cbd5e1",
+  borderRadius: "8px",
+  fontSize: "15px",
+  background: "#ffffff",
+};

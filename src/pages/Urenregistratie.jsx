@@ -13,14 +13,20 @@ export default function Urenregistratie() {
 
   const [zoekterm, setZoekterm] = useState("");
   const [datumFilter, setDatumFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const [toonForm, setToonForm] = useState(false);
+  const [toonDetail, setToonDetail] = useState(false);
+
+  const [geselecteerdeRegistratie, setGeselecteerdeRegistratie] =
+    useState(null);
+
   const [laden, setLaden] = useState(true);
   const [actieBezig, setActieBezig] = useState(null);
 
-  // ==========================================
+  // ============================================================
   // UREN LADEN
-  // ==========================================
+  // ============================================================
 
   useEffect(() => {
     laadUren();
@@ -29,45 +35,147 @@ export default function Urenregistratie() {
   async function laadUren() {
     setLaden(true);
 
-    const { data, error } = await supabase
-      .from("urenregistratie")
-      .select("*")
-      .order("datum", {
-        ascending: false,
+    try {
+      const {
+        data: urenData,
+        error: urenError,
+      } = await supabase
+        .from("urenregistratie")
+        .select("*")
+        .order("datum", {
+          ascending: false,
+        });
+
+      if (urenError) {
+        throw urenError;
+      }
+
+      const registraties = urenData || [];
+
+      // ========================================================
+      // PLANNINGEN OPHALEN
+      // ========================================================
+
+      const planningIds = [
+        ...new Set(
+          registraties
+            .map((u) => u.planning_id)
+            .filter(Boolean)
+        ),
+      ];
+
+      let planningen = [];
+
+      if (planningIds.length > 0) {
+        const {
+          data: planningData,
+          error: planningError,
+        } = await supabase
+          .from("planning")
+          .select("*")
+          .in("id", planningIds);
+
+        if (planningError) {
+          console.error(
+            "Fout bij laden planning:",
+            planningError
+          );
+        } else {
+          planningen = planningData || [];
+        }
+      }
+
+      // ========================================================
+      // UREN + PLANNING COMBINEREN
+      // ========================================================
+
+      const compleet = registraties.map((u) => {
+        const planning = planningen.find(
+          (p) =>
+            String(p.id) ===
+            String(u.planning_id)
+        );
+
+        return {
+          ...u,
+
+          terminal:
+            planning?.terminal || "",
+
+          dienst:
+            planning?.dienst || "",
+
+          planning_medewerker:
+            planning?.medewerker || "",
+
+          planning_status:
+            planning?.status || "",
+        };
       });
 
-    if (error) {
+      setUren(compleet);
+    } catch (error) {
       console.error(
         "Fout bij laden uren:",
         error
       );
 
-      alert(error.message);
+      alert(
+        error.message ||
+          "De urenregistraties konden niet worden geladen."
+      );
+    } finally {
       setLaden(false);
-      return;
     }
-
-    setUren(data || []);
-    setLaden(false);
   }
 
-  // ==========================================
-  // STATUS FUNCTIES
-  // ==========================================
+  // ============================================================
+  // DETAIL OPENEN
+  // ============================================================
+
+  function openDetail(registratie) {
+    setGeselecteerdeRegistratie(
+      registratie
+    );
+
+    setToonDetail(true);
+  }
+
+  // ============================================================
+  // DETAIL SLUITEN
+  // ============================================================
+
+  function sluitDetail() {
+    setToonDetail(false);
+    setGeselecteerdeRegistratie(null);
+  }
+
+  // ============================================================
+  // BEWERKEN
+  // ============================================================
+
+  function bewerkenRegistratie() {
+    setToonDetail(false);
+    setToonForm(true);
+  }
+
+  // ============================================================
+  // STATUS
+  // ============================================================
 
   function normaleStatus(status) {
     return (
-      status || "Open"
+      status || "Ingediend"
     )
       .toString()
       .toLowerCase()
       .trim();
   }
 
-  function isOpen(status) {
+  function isIngediend(status) {
     return (
       normaleStatus(status) ===
-      "open"
+      "ingediend"
     );
   }
 
@@ -89,9 +197,9 @@ export default function Urenregistratie() {
     );
   }
 
-  // ==========================================
+  // ============================================================
   // STATUS KLEUR
-  // ==========================================
+  // ============================================================
 
   function statusKleur(status) {
     if (isGoedgekeurd(status)) {
@@ -108,7 +216,7 @@ export default function Urenregistratie() {
       };
     }
 
-    if (isOpen(status)) {
+    if (isIngediend(status)) {
       return {
         background: "#fef3c7",
         color: "#92400e",
@@ -121,9 +229,9 @@ export default function Urenregistratie() {
     };
   }
 
-  // ==========================================
+  // ============================================================
   // STATUS WIJZIGEN
-  // ==========================================
+  // ============================================================
 
   async function wijzigStatus(
     id,
@@ -145,12 +253,33 @@ export default function Urenregistratie() {
     setActieBezig(id);
 
     try {
-      const { error } = await supabase
+      const updateData = {
+        status: nieuweStatus,
+      };
+
+      if (
+        nieuweStatus === "Goedgekeurd"
+      ) {
+        updateData.goedgekeurd_op =
+          new Date().toISOString();
+      }
+
+      if (
+        nieuweStatus === "Afgekeurd"
+      ) {
+        updateData.goedgekeurd_op = null;
+        updateData.goedgekeurd_door = null;
+      }
+
+      const {
+        data,
+        error,
+      } = await supabase
         .from("urenregistratie")
-        .update({
-          status: nieuweStatus,
-        })
-        .eq("id", id);
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
 
       if (error) {
         throw error;
@@ -161,10 +290,21 @@ export default function Urenregistratie() {
           u.id === id
             ? {
                 ...u,
-                status: nieuweStatus,
+                ...data,
               }
             : u
         )
+      );
+
+      setGeselecteerdeRegistratie(
+        (vorige) =>
+          vorige &&
+          vorige.id === id
+            ? {
+                ...vorige,
+                ...data,
+              }
+            : vorige
       );
 
       alert(
@@ -187,9 +327,9 @@ export default function Urenregistratie() {
     }
   }
 
-  // ==========================================
+  // ============================================================
   // FILTER
-  // ==========================================
+  // ============================================================
 
   const gefilterd = useMemo(() => {
     const zoek =
@@ -208,6 +348,11 @@ export default function Urenregistratie() {
           u.terminal || ""
         ).toLowerCase();
 
+      const dienst =
+        (
+          u.dienst || ""
+        ).toLowerCase();
+
       const status =
         (
           u.status || ""
@@ -217,32 +362,42 @@ export default function Urenregistratie() {
         !zoek ||
         medewerker.includes(zoek) ||
         terminal.includes(zoek) ||
+        dienst.includes(zoek) ||
         status.includes(zoek);
 
       const datumGoed =
         !datumFilter ||
         u.datum === datumFilter;
 
+      const statusGoed =
+        !statusFilter ||
+        normaleStatus(u.status) ===
+          statusFilter.toLowerCase();
+
       return (
         komtVoor &&
-        datumGoed
+        datumGoed &&
+        statusGoed
       );
     });
   }, [
     uren,
     zoekterm,
     datumFilter,
+    statusFilter,
   ]);
 
-  // ==========================================
+  // ============================================================
   // TOTALEN
-  // ==========================================
+  // ============================================================
 
   const totaalUren = useMemo(() => {
     return uren.reduce(
       (totaal, u) =>
         totaal +
-        Number(u.uren || 0),
+        Number(
+          u.gewerkte_uren || 0
+        ),
       0
     );
   }, [uren]);
@@ -274,29 +429,27 @@ export default function Urenregistratie() {
   const totaalRegistraties =
     uren.length;
 
-  // ==========================================
-  // GEFILTERDE UREN
-  // ==========================================
-
   const gefilterdeUren =
     useMemo(() => {
       return gefilterd.reduce(
         (totaal, u) =>
           totaal +
-          Number(u.uren || 0),
+          Number(
+            u.gewerkte_uren || 0
+          ),
         0
       );
     }, [gefilterd]);
 
-  // ==========================================
+  // ============================================================
   // STATUS TOTALEN
-  // ==========================================
+  // ============================================================
 
-  const openAantal =
+  const ingediendAantal =
     useMemo(() => {
       return uren.filter(
         (u) =>
-          isOpen(u.status)
+          isIngediend(u.status)
       ).length;
     }, [uren]);
 
@@ -317,7 +470,7 @@ export default function Urenregistratie() {
           isAfgekeurd(
             u.status
           )
-      ).length;
+        ).length;
     }, [uren]);
 
   const goedgekeurdeUren =
@@ -332,31 +485,48 @@ export default function Urenregistratie() {
           (totaal, u) =>
             totaal +
             Number(
-              u.uren || 0
+              u.gewerkte_uren || 0
             ),
           0
         );
     }, [uren]);
 
-  // ==========================================
-  // EXCEL EXPORT
-  // ==========================================
+  const ingediendeUren =
+    useMemo(() => {
+      return uren
+        .filter((u) =>
+          isIngediend(u.status)
+        )
+        .reduce(
+          (totaal, u) =>
+            totaal +
+            Number(
+              u.gewerkte_uren || 0
+            ),
+          0
+        );
+    }, [uren]);
+
+  // ============================================================
+  // EXCEL
+  // ============================================================
 
   function exporteerExcel() {
     exportUrenExcel(gefilterd);
   }
 
-  // ==========================================
+  // ============================================================
   // NIEUWE REGISTRATIE
-  // ==========================================
+  // ============================================================
 
   function openNieuw() {
+    setGeselecteerdeRegistratie(null);
     setToonForm(true);
   }
 
-  // ==========================================
+  // ============================================================
   // RENDER
-  // ==========================================
+  // ============================================================
 
   return (
     <>
@@ -368,9 +538,9 @@ export default function Urenregistratie() {
           boxSizing: "border-box",
         }}
       >
-        {/* ====================================
+        {/* =====================================================
             HEADER
-        ===================================== */}
+        ====================================================== */}
 
         <div
           style={{
@@ -409,9 +579,9 @@ export default function Urenregistratie() {
                   marginBottom: 0,
                 }}
               >
-                Registratie en
-                goedkeuring van
-                gewerkte uren
+                Gewerkte uren van
+                medewerkers controleren
+                en goedkeuren
               </p>
             </div>
 
@@ -422,8 +592,6 @@ export default function Urenregistratie() {
                 flexWrap: "wrap",
               }}
             >
-              {/* EXCEL */}
-
               <button
                 className="new-btn"
                 type="button"
@@ -438,8 +606,6 @@ export default function Urenregistratie() {
                 📊 Excel
               </button>
 
-              {/* NIEUWE REGISTRATIE */}
-
               <button
                 className="new-btn"
                 type="button"
@@ -453,13 +619,27 @@ export default function Urenregistratie() {
               >
                 + Nieuwe registratie
               </button>
+
+              <button
+                className="new-btn"
+                type="button"
+                style={{
+                  background:
+                    "#475569",
+                }}
+                onClick={
+                  laadUren
+                }
+              >
+                🔄 Vernieuwen
+              </button>
             </div>
           </div>
         </div>
 
-        {/* ====================================
+        {/* =====================================================
             DASHBOARD
-        ===================================== */}
+        ====================================================== */}
 
         <UrenDashboard
           totaalUren={totaalUren.toFixed(1)}
@@ -474,9 +654,9 @@ export default function Urenregistratie() {
           }
         />
 
-        {/* ====================================
+        {/* =====================================================
             STATUS KAARTEN
-        ===================================== */}
+        ====================================================== */}
 
         <div
           style={{
@@ -487,137 +667,58 @@ export default function Urenregistratie() {
             marginBottom: "20px",
           }}
         >
-          {/* OPEN */}
+          <StatusCard
+            icon="🟠"
+            titel="Ingediend"
+            aantal={
+              ingediendAantal
+            }
+            uren={
+              ingediendeUren
+            }
+            background="#fef3c7"
+            color="#92400e"
+          />
 
-          <div
-            style={{
-              background: "#fef3c7",
-              borderRadius: "14px",
-              padding: "18px",
-            }}
-          >
-            <div
-              style={{
-                color: "#92400e",
-                fontSize: "14px",
-                fontWeight: "600",
-              }}
-            >
-              🟡 Open
-            </div>
+          <StatusCard
+            icon="🟢"
+            titel="Goedgekeurd"
+            aantal={
+              goedgekeurdAantal
+            }
+            uren={
+              goedgekeurdeUren
+            }
+            background="#dcfce7"
+            color="#166534"
+          />
 
-            <strong
-              style={{
-                display: "block",
-                marginTop: "5px",
-                fontSize: "26px",
-                color: "#92400e",
-              }}
-            >
-              {openAantal}
-            </strong>
-          </div>
+          <StatusCard
+            icon="🔴"
+            titel="Afgekeurd"
+            aantal={
+              afgekeurdAantal
+            }
+            uren={null}
+            background="#fee2e2"
+            color="#b91c1c"
+          />
 
-          {/* GOEDGEKEURD */}
-
-          <div
-            style={{
-              background: "#dcfce7",
-              borderRadius: "14px",
-              padding: "18px",
-            }}
-          >
-            <div
-              style={{
-                color: "#166534",
-                fontSize: "14px",
-                fontWeight: "600",
-              }}
-            >
-              🟢 Goedgekeurd
-            </div>
-
-            <strong
-              style={{
-                display: "block",
-                marginTop: "5px",
-                fontSize: "26px",
-                color: "#166534",
-              }}
-            >
-              {goedgekeurdAantal}
-            </strong>
-          </div>
-
-          {/* AFGEKEURD */}
-
-          <div
-            style={{
-              background: "#fee2e2",
-              borderRadius: "14px",
-              padding: "18px",
-            }}
-          >
-            <div
-              style={{
-                color: "#b91c1c",
-                fontSize: "14px",
-                fontWeight: "600",
-              }}
-            >
-              🔴 Afgekeurd
-            </div>
-
-            <strong
-              style={{
-                display: "block",
-                marginTop: "5px",
-                fontSize: "26px",
-                color: "#b91c1c",
-              }}
-            >
-              {afgekeurdAantal}
-            </strong>
-          </div>
-
-          {/* GOEDGEKEURDE UREN */}
-
-          <div
-            style={{
-              background: "#eff6ff",
-              borderRadius: "14px",
-              padding: "18px",
-            }}
-          >
-            <div
-              style={{
-                color: "#1d4ed8",
-                fontSize: "14px",
-                fontWeight: "600",
-              }}
-            >
-              🧮 Goedgekeurde uren
-            </div>
-
-            <strong
-              style={{
-                display: "block",
-                marginTop: "5px",
-                fontSize: "26px",
-                color: "#1d4ed8",
-              }}
-            >
-              {goedgekeurdeUren.toFixed(
-                2
-              )}{" "}
-              uur
-            </strong>
-          </div>
+          <StatusCard
+            icon="🕒"
+            titel="Totaal uren"
+            aantal={null}
+            uren={
+              totaalUren
+            }
+            background="#eff6ff"
+            color="#1d4ed8"
+          />
         </div>
 
-        {/* ====================================
+        {/* =====================================================
             TOTALEN
-        ===================================== */}
+        ====================================================== */}
 
         <div
           style={{
@@ -628,74 +729,34 @@ export default function Urenregistratie() {
             marginBottom: "20px",
           }}
         >
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: "14px",
-              padding: "18px",
-              border:
-                "1px solid #dcfce7",
-            }}
-          >
-            <div
-              style={{
-                color: "#64748b",
-              }}
-            >
-              🧮 Totaal geregistreerd
-            </div>
+          <InfoCard
+            titel="🧮 Totaal geregistreerd"
+            waarde={`${totaalUren.toFixed(
+              2
+            )} uur`}
+            kleur="#15803d"
+          />
 
-            <strong
-              style={{
-                display: "block",
-                marginTop: "5px",
-                fontSize: "24px",
-                color: "#15803d",
-              }}
-            >
-              {totaalUren.toFixed(
-                1
-              )}{" "}
-              uur
-            </strong>
-          </div>
+          <InfoCard
+            titel="🔎 Gefilterd"
+            waarde={`${gefilterdeUren.toFixed(
+              2
+            )} uur`}
+            kleur="#1d4ed8"
+          />
 
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: "14px",
-              padding: "18px",
-              border:
-                "1px solid #dbeafe",
-            }}
-          >
-            <div
-              style={{
-                color: "#64748b",
-              }}
-            >
-              🔎 Gefilterd
-            </div>
-
-            <strong
-              style={{
-                display: "block",
-                marginTop: "5px",
-                fontSize: "24px",
-                color: "#1d4ed8",
-              }}
-            >
-              {gefilterdeUren.toFixed(
-                1
-              )}{" "}
-              uur
-            </strong>
-          </div>
+          <InfoCard
+            titel="⏳ Wacht op goedkeuring"
+            waarde={`${ingediendeUren.toFixed(
+              2
+            )} uur`}
+            kleur="#d97706"
+          />
         </div>
 
-        {/* ====================================
+        {/* =====================================================
             FILTERS
-        ===================================== */}
+        ====================================================== */}
 
         <div
           style={{
@@ -708,18 +769,17 @@ export default function Urenregistratie() {
           }}
         >
           <div
-            className="uren-filters"
             style={{
               display: "grid",
               gridTemplateColumns:
-                "minmax(250px, 1fr) 200px auto",
+                "minmax(250px, 1fr) 180px 180px auto",
               gap: "12px",
               alignItems: "center",
             }}
           >
             <input
               type="text"
-              placeholder="🔍 Zoek medewerker, terminal of status..."
+              placeholder="🔍 Zoek medewerker, terminal of dienst..."
               value={zoekterm}
               onChange={(e) =>
                 setZoekterm(
@@ -730,6 +790,10 @@ export default function Urenregistratie() {
                 width: "100%",
                 boxSizing:
                   "border-box",
+                padding: "11px",
+                border:
+                  "1px solid #cbd5e1",
+                borderRadius: "8px",
               }}
             />
 
@@ -741,17 +805,56 @@ export default function Urenregistratie() {
                   e.target.value
                 )
               }
+              style={{
+                padding: "11px",
+                border:
+                  "1px solid #cbd5e1",
+                borderRadius: "8px",
+              }}
             />
+
+            <select
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(
+                  e.target.value
+                )
+              }
+              style={{
+                padding: "11px",
+                border:
+                  "1px solid #cbd5e1",
+                borderRadius: "8px",
+              }}
+            >
+              <option value="">
+                Alle statussen
+              </option>
+
+              <option value="ingediend">
+                🟠 Ingediend
+              </option>
+
+              <option value="goedgekeurd">
+                🟢 Goedgekeurd
+              </option>
+
+              <option value="afgekeurd">
+                🔴 Afgekeurd
+              </option>
+            </select>
 
             <button
               type="button"
               className="new-btn"
               style={{
-                background: "#64748b",
+                background:
+                  "#64748b",
               }}
               onClick={() => {
                 setZoekterm("");
                 setDatumFilter("");
+                setStatusFilter("");
               }}
             >
               🔄 Wissen
@@ -771,9 +874,9 @@ export default function Urenregistratie() {
           </div>
         </div>
 
-        {/* ====================================
-            URENOVERZICHT
-        ===================================== */}
+        {/* =====================================================
+            TABEL
+        ====================================================== */}
 
         <div
           style={{
@@ -812,784 +915,1006 @@ export default function Urenregistratie() {
               gevonden.
             </div>
           ) : (
-            <>
-              {/* =================================
-                  DESKTOP TABEL
-              ================================== */}
-
-              <div
-                className="uren-tabel-desktop"
+            <div
+              style={{
+                overflowX:
+                  "auto",
+              }}
+            >
+              <table
                 style={{
                   width: "100%",
-                  overflow: "hidden",
+                  borderCollapse:
+                    "collapse",
+                  minWidth:
+                    "1200px",
+                  fontSize: "13px",
                 }}
               >
-                <table
-                  style={{
-                    width: "100%",
-                    borderCollapse:
-                      "collapse",
-                    tableLayout:
-                      "fixed",
-                    fontSize: "13px",
-                  }}
-                >
-                  <thead>
-                    <tr
-                      style={{
-                        background:
-                          "#eff6ff",
-                        color: "#1e3a8a",
-                      }}
-                    >
-                      <th
-                        style={{
-                          width: "10%",
-                          padding:
-                            "12px 6px",
-                          textAlign:
-                            "left",
-                        }}
-                      >
-                        Datum
-                      </th>
+                <thead>
+                  <tr
+                    style={{
+                      background:
+                        "#eff6ff",
+                      color:
+                        "#1e3a8a",
+                    }}
+                  >
+                    <th style={thStyle}>
+                      Datum
+                    </th>
 
-                      <th
-                        style={{
-                          width: "17%",
-                          padding:
-                            "12px 6px",
-                          textAlign:
-                            "left",
-                        }}
-                      >
-                        Medewerker
-                      </th>
+                    <th style={thStyle}>
+                      Medewerker
+                    </th>
 
-                      <th
-                        style={{
-                          width: "17%",
-                          padding:
-                            "12px 6px",
-                          textAlign:
-                            "left",
-                        }}
-                      >
-                        Terminal
-                      </th>
+                    <th style={thStyle}>
+                      Terminal
+                    </th>
 
-                      <th
-                        style={{
-                          width: "9%",
-                          padding:
-                            "12px 4px",
-                          textAlign:
-                            "center",
-                        }}
-                      >
-                        Van
-                      </th>
+                    <th style={thStyle}>
+                      Dienst
+                    </th>
 
-                      <th
-                        style={{
-                          width: "9%",
-                          padding:
-                            "12px 4px",
-                          textAlign:
-                            "center",
-                        }}
-                      >
-                        Tot
-                      </th>
+                    <th style={thStyle}>
+                      Start
+                    </th>
 
-                      <th
-                        style={{
-                          width: "8%",
-                          padding:
-                            "12px 4px",
-                          textAlign:
-                            "center",
-                        }}
-                      >
-                        Pauze
-                      </th>
+                    <th style={thStyle}>
+                      Einde
+                    </th>
 
-                      <th
-                        style={{
-                          width: "8%",
-                          padding:
-                            "12px 4px",
-                          textAlign:
-                            "center",
-                        }}
-                      >
-                        Uren
-                      </th>
+                    <th style={thStyle}>
+                      Pauze
+                    </th>
 
-                      <th
-                        style={{
-                          width: "12%",
-                          padding:
-                            "12px 4px",
-                          textAlign:
-                            "center",
-                        }}
-                      >
-                        Status
-                      </th>
+                    <th style={thStyle}>
+                      Uren
+                    </th>
 
-                      <th
-                        style={{
-                          width: "10%",
-                          padding:
-                            "12px 4px",
-                          textAlign:
-                            "center",
-                        }}
-                      >
-                        Acties
-                      </th>
-                    </tr>
-                  </thead>
+                    <th style={thStyle}>
+                      Status
+                    </th>
 
-                  <tbody>
-                    {gefilterd.map(
-                      (u) => {
-                        const kleur =
-                          statusKleur(
-                            u.status
-                          );
+                    <th style={thStyle}>
+                      Acties
+                    </th>
+                  </tr>
+                </thead>
 
-                        const bezig =
-                          actieBezig ===
-                          u.id;
-
-                        return (
-                          <tr
-                            key={u.id}
-                            style={{
-                              borderBottom:
-                                "1px solid #e2e8f0",
-                            }}
-                          >
-                            <td
-                              style={{
-                                padding:
-                                  "13px 6px",
-                                whiteSpace:
-                                  "nowrap",
-                              }}
-                            >
-                              {u.datum ||
-                                "-"}
-                            </td>
-
-                            <td
-                              style={{
-                                padding:
-                                  "13px 6px",
-                                overflow:
-                                  "hidden",
-                              }}
-                            >
-                              <strong
-                                style={{
-                                  display:
-                                    "block",
-                                  overflow:
-                                    "hidden",
-                                  textOverflow:
-                                    "ellipsis",
-                                }}
-                              >
-                                {u.medewerker ||
-                                  "-"}
-                              </strong>
-                            </td>
-
-                            <td
-                              style={{
-                                padding:
-                                  "13px 6px",
-                                overflow:
-                                  "hidden",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  display:
-                                    "block",
-                                  overflow:
-                                    "hidden",
-                                  textOverflow:
-                                    "ellipsis",
-                                }}
-                              >
-                                {u.terminal ||
-                                  "-"}
-                              </span>
-                            </td>
-
-                            <td
-                              style={{
-                                padding:
-                                  "13px 2px",
-                                textAlign:
-                                  "center",
-                                whiteSpace:
-                                  "nowrap",
-                              }}
-                            >
-                              {u.begintijd ||
-                                "-"}
-                            </td>
-
-                            <td
-                              style={{
-                                padding:
-                                  "13px 2px",
-                                textAlign:
-                                  "center",
-                                whiteSpace:
-                                  "nowrap",
-                              }}
-                            >
-                              {u.eindtijd ||
-                                "-"}
-                            </td>
-
-                            <td
-                              style={{
-                                padding:
-                                  "13px 2px",
-                                textAlign:
-                                  "center",
-                                whiteSpace:
-                                  "nowrap",
-                              }}
-                            >
-                              {u.pauze !=
-                              null
-                                ? `${u.pauze} min`
-                                : "-"}
-                            </td>
-
-                            <td
-                              style={{
-                                padding:
-                                  "13px 2px",
-                                textAlign:
-                                  "center",
-                                whiteSpace:
-                                  "nowrap",
-                              }}
-                            >
-                              <strong
-                                style={{
-                                  color:
-                                    "#15803d",
-                                }}
-                              >
-                                {u.uren !=
-                                null
-                                  ? `${u.uren} uur`
-                                  : "-"}
-                              </strong>
-                            </td>
-
-                            <td
-                              style={{
-                                padding:
-                                  "13px 2px",
-                                textAlign:
-                                  "center",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  display:
-                                    "inline-block",
-                                  padding:
-                                    "5px 7px",
-                                  borderRadius:
-                                    "999px",
-                                  background:
-                                    kleur.background,
-                                  color:
-                                    kleur.color,
-                                  fontWeight:
-                                    "700",
-                                  fontSize:
-                                    "11px",
-                                  whiteSpace:
-                                    "nowrap",
-                                }}
-                              >
-                                {u.status ||
-                                  "Open"}
-                              </span>
-                            </td>
-
-                            <td
-                              style={{
-                                padding:
-                                  "13px 2px",
-                                textAlign:
-                                  "center",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display:
-                                    "flex",
-                                  justifyContent:
-                                    "center",
-                                  gap:
-                                    "4px",
-                                }}
-                              >
-                                {!isGoedgekeurd(
-                                  u.status
-                                ) && (
-                                  <button
-                                    type="button"
-                                    disabled={
-                                      bezig
-                                    }
-                                    onClick={() =>
-                                      wijzigStatus(
-                                        u.id,
-                                        "Goedgekeurd"
-                                      )
-                                    }
-                                    title="Goedkeuren"
-                                    style={{
-                                      width:
-                                        "34px",
-                                      height:
-                                        "34px",
-                                      border:
-                                        "none",
-                                      borderRadius:
-                                        "8px",
-                                      background:
-                                        "#16a34a",
-                                      color:
-                                        "#ffffff",
-                                      cursor:
-                                        bezig
-                                          ? "wait"
-                                          : "pointer",
-                                      fontSize:
-                                        "15px",
-                                    }}
-                                  >
-                                    {bezig
-                                      ? "⏳"
-                                      : "✓"}
-                                  </button>
-                                )}
-
-                                {!isAfgekeurd(
-                                  u.status
-                                ) && (
-                                  <button
-                                    type="button"
-                                    disabled={
-                                      bezig
-                                    }
-                                    onClick={() =>
-                                      wijzigStatus(
-                                        u.id,
-                                        "Afgekeurd"
-                                      )
-                                    }
-                                    title="Afkeuren"
-                                    style={{
-                                      width:
-                                        "34px",
-                                      height:
-                                        "34px",
-                                      border:
-                                        "none",
-                                      borderRadius:
-                                        "8px",
-                                      background:
-                                        "#dc2626",
-                                      color:
-                                        "#ffffff",
-                                      cursor:
-                                        bezig
-                                          ? "wait"
-                                          : "pointer",
-                                      fontSize:
-                                        "15px",
-                                    }}
-                                  >
-                                    {bezig
-                                      ? "⏳"
-                                      : "✕"}
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
+                <tbody>
+                  {gefilterd.map(
+                    (u) => {
+                      const kleur =
+                        statusKleur(
+                          u.status
                         );
-                      }
-                    )}
-                  </tbody>
-                </table>
-              </div>
 
-              {/* =================================
-                  MOBIELE KAARTEN
-              ================================== */}
+                      const bezig =
+                        actieBezig ===
+                        u.id;
 
-              <div
-                className="uren-kaarten-mobiel"
-                style={{
-                  display: "none",
-                }}
-              >
-                {gefilterd.map(
-                  (u) => {
-                    const kleur =
-                      statusKleur(
-                        u.status
-                      );
-
-                    const bezig =
-                      actieBezig ===
-                      u.id;
-
-                    return (
-                      <div
-                        key={u.id}
-                        style={{
-                          border:
-                            "1px solid #e2e8f0",
-                          borderRadius:
-                            "14px",
-                          padding:
-                            "16px",
-                          marginBottom:
-                            "12px",
-                          background:
-                            "#ffffff",
-                        }}
-                      >
-                        <div
+                      return (
+                        <tr
+                          key={u.id}
                           style={{
-                            display:
-                              "flex",
-                            justifyContent:
-                              "space-between",
-                            alignItems:
-                              "flex-start",
-                            gap:
-                              "10px",
-                            marginBottom:
-                              "12px",
+                            borderBottom:
+                              "1px solid #e2e8f0",
                           }}
                         >
-                          <div
+                          <td style={tdStyle}>
+                            {u.datum ||
+                              "-"}
+                          </td>
+
+                          <td style={tdStyle}>
+                            <strong>
+                              {u.medewerker ||
+                                "-"}
+                            </strong>
+                          </td>
+
+                          <td style={tdStyle}>
+                            {u.terminal ||
+                              "-"}
+                          </td>
+
+                          <td style={tdStyle}>
+                            {u.dienst ||
+                              "-"}
+                          </td>
+
+                          <td
                             style={{
-                              minWidth: 0,
+                              ...tdStyle,
+                              textAlign:
+                                "center",
+                            }}
+                          >
+                            {formatTijd(
+                              u.starttijd
+                            )}
+                          </td>
+
+                          <td
+                            style={{
+                              ...tdStyle,
+                              textAlign:
+                                "center",
+                            }}
+                          >
+                            {formatTijd(
+                              u.eindtijd
+                            )}
+                          </td>
+
+                          <td
+                            style={{
+                              ...tdStyle,
+                              textAlign:
+                                "center",
+                            }}
+                          >
+                            {u.pauze_minuten ??
+                              0}{" "}
+                            min
+                          </td>
+
+                          <td
+                            style={{
+                              ...tdStyle,
+                              textAlign:
+                                "center",
                             }}
                           >
                             <strong
                               style={{
-                                fontSize:
-                                  "17px",
-                                color:
-                                  "#0f172a",
-                              }}
-                            >
-                              👤{" "}
-                              {u.medewerker ||
-                                "-"}
-                            </strong>
-
-                            <div
-                              style={{
-                                color:
-                                  "#64748b",
-                                marginTop:
-                                  "5px",
-                              }}
-                            >
-                              🏭{" "}
-                              {u.terminal ||
-                                "-"}
-                            </div>
-                          </div>
-
-                          <span
-                            style={{
-                              padding:
-                                "6px 9px",
-                              borderRadius:
-                                "999px",
-                              background:
-                                kleur.background,
-                              color:
-                                kleur.color,
-                              fontWeight:
-                                "700",
-                              fontSize:
-                                "11px",
-                              whiteSpace:
-                                "nowrap",
-                            }}
-                          >
-                            {u.status ||
-                              "Open"}
-                          </span>
-                        </div>
-
-                        <div
-                          style={{
-                            display:
-                              "grid",
-                            gridTemplateColumns:
-                              "repeat(2, 1fr)",
-                            gap:
-                              "10px",
-                            background:
-                              "#f8fafc",
-                            borderRadius:
-                              "10px",
-                            padding:
-                              "12px",
-                          }}
-                        >
-                          <div>
-                            <small
-                              style={{
-                                color:
-                                  "#64748b",
-                              }}
-                            >
-                              Datum
-                            </small>
-
-                            <div>
-                              {u.datum ||
-                                "-"}
-                            </div>
-                          </div>
-
-                          <div>
-                            <small
-                              style={{
-                                color:
-                                  "#64748b",
-                              }}
-                            >
-                              Uren
-                            </small>
-
-                            <div
-                              style={{
                                 color:
                                   "#15803d",
-                                fontWeight:
-                                  "700",
                               }}
                             >
-                              {u.uren !=
-                              null
-                                ? `${u.uren} uur`
-                                : "-"}
-                            </div>
-                          </div>
+                              {Number(
+                                u.gewerkte_uren ||
+                                  0
+                              ).toFixed(
+                                2
+                              )}{" "}
+                              uur
+                            </strong>
+                          </td>
 
-                          <div>
-                            <small
+                          <td
+                            style={{
+                              ...tdStyle,
+                              textAlign:
+                                "center",
+                            }}
+                          >
+                            <span
                               style={{
-                                color:
-                                  "#64748b",
-                              }}
-                            >
-                              Werktijd
-                            </small>
-
-                            <div>
-                              {u.begintijd ||
-                                "-"}{" "}
-                              →{" "}
-                              {u.eindtijd ||
-                                "-"}
-                            </div>
-                          </div>
-
-                          <div>
-                            <small
-                              style={{
-                                color:
-                                  "#64748b",
-                              }}
-                            >
-                              Pauze
-                            </small>
-
-                            <div>
-                              {u.pauze !=
-                              null
-                                ? `${u.pauze} min`
-                                : "-"}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          style={{
-                            display:
-                              "flex",
-                            gap:
-                              "8px",
-                            marginTop:
-                              "12px",
-                          }}
-                        >
-                          {!isGoedgekeurd(
-                            u.status
-                          ) && (
-                            <button
-                              type="button"
-                              disabled={
-                                bezig
-                              }
-                              onClick={() =>
-                                wijzigStatus(
-                                  u.id,
-                                  "Goedgekeurd"
-                                )
-                              }
-                              style={{
-                                flex: 1,
-                                border:
-                                  "none",
-                                borderRadius:
-                                  "9px",
+                                display:
+                                  "inline-block",
                                 padding:
-                                  "10px",
-                                background:
-                                  "#16a34a",
-                                color:
-                                  "#ffffff",
-                                fontWeight:
-                                  "700",
-                              }}
-                            >
-                              {bezig
-                                ? "⏳"
-                                : "✅ Goedkeuren"}
-                            </button>
-                          )}
-
-                          {!isAfgekeurd(
-                            u.status
-                          ) && (
-                            <button
-                              type="button"
-                              disabled={
-                                bezig
-                              }
-                              onClick={() =>
-                                wijzigStatus(
-                                  u.id,
-                                  "Afgekeurd"
-                                )
-                              }
-                              style={{
-                                flex: 1,
-                                border:
-                                  "none",
+                                  "6px 10px",
                                 borderRadius:
-                                  "9px",
-                                padding:
-                                  "10px",
+                                  "999px",
                                 background:
-                                  "#dc2626",
+                                  kleur.background,
                                 color:
-                                  "#ffffff",
+                                  kleur.color,
                                 fontWeight:
                                   "700",
+                                fontSize:
+                                  "11px",
+                                whiteSpace:
+                                  "nowrap",
                               }}
                             >
-                              {bezig
-                                ? "⏳"
-                                : "❌ Afkeuren"}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-                )}
-              </div>
-            </>
+                              {u.status ||
+                                "Ingediend"}
+                            </span>
+                          </td>
+
+                          {/* ACTIES */}
+
+                          <td
+                            style={{
+                              ...tdStyle,
+                              textAlign:
+                                "center",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display:
+                                  "flex",
+                                justifyContent:
+                                  "center",
+                                gap:
+                                  "6px",
+                              }}
+                            >
+                              {/* BEKIJKEN */}
+
+                              <button
+                                type="button"
+                                title="Details bekijken"
+                                onClick={() =>
+                                  openDetail(
+                                    u
+                                  )
+                                }
+                                style={{
+                                  width:
+                                    "36px",
+                                  height:
+                                    "36px",
+                                  border:
+                                    "none",
+                                  borderRadius:
+                                    "8px",
+                                  background:
+                                    "#2563eb",
+                                  color:
+                                    "#ffffff",
+                                  cursor:
+                                    "pointer",
+                                  fontSize:
+                                    "16px",
+                                }}
+                              >
+                                👁️
+                              </button>
+
+                              {/* GOEDKEUREN */}
+
+                              {!isGoedgekeurd(
+                                u.status
+                              ) && (
+                                <button
+                                  type="button"
+                                  disabled={
+                                    bezig
+                                  }
+                                  onClick={() =>
+                                    wijzigStatus(
+                                      u.id,
+                                      "Goedgekeurd"
+                                    )
+                                  }
+                                  title="Goedkeuren"
+                                  style={{
+                                    width:
+                                      "36px",
+                                    height:
+                                      "36px",
+                                    border:
+                                      "none",
+                                    borderRadius:
+                                      "8px",
+                                    background:
+                                      "#16a34a",
+                                    color:
+                                      "#ffffff",
+                                    cursor:
+                                      bezig
+                                        ? "wait"
+                                        : "pointer",
+                                    fontSize:
+                                      "16px",
+                                  }}
+                                >
+                                  {bezig
+                                    ? "⏳"
+                                    : "✓"}
+                                </button>
+                              )}
+
+                              {/* AFKEUREN */}
+
+                              {!isAfgekeurd(
+                                u.status
+                              ) && (
+                                <button
+                                  type="button"
+                                  disabled={
+                                    bezig
+                                  }
+                                  onClick={() =>
+                                    wijzigStatus(
+                                      u.id,
+                                      "Afgekeurd"
+                                    )
+                                  }
+                                  title="Afkeuren"
+                                  style={{
+                                    width:
+                                      "36px",
+                                    height:
+                                      "36px",
+                                    border:
+                                      "none",
+                                    borderRadius:
+                                      "8px",
+                                    background:
+                                      "#dc2626",
+                                    color:
+                                      "#ffffff",
+                                    cursor:
+                                      bezig
+                                        ? "wait"
+                                        : "pointer",
+                                    fontSize:
+                                      "16px",
+                                  }}
+                                >
+                                  {bezig
+                                    ? "⏳"
+                                    : "✕"}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
 
-      {/* ====================================
-          NIEUWE REGISTRATIE MODAL
-      ===================================== */}
+      {/* =======================================================
+          NIEUWE / BEWERKEN REGISTRATIE
+      ======================================================== */}
 
       {toonForm && (
         <div
-          className="modal"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background:
-              "rgba(15,23,42,.55)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-            zIndex: 1000,
-          }}
+          style={overlayStyle}
         >
           <div
-            className="modal-content"
             style={{
-              width: "100%",
+              ...modalStyle,
               maxWidth: "700px",
-              maxHeight: "90vh",
-              overflowY: "auto",
-              background: "#ffffff",
-              borderRadius: "18px",
-              padding: "25px",
-              boxSizing: "border-box",
             }}
           >
             <UrenregistratieForm
+              registratie={
+                geselecteerdeRegistratie
+              }
               onSaved={() => {
                 laadUren();
                 setToonForm(false);
+                setGeselecteerdeRegistratie(
+                  null
+                );
+              }}
+              onCancel={() => {
+                setToonForm(false);
+                setGeselecteerdeRegistratie(
+                  null
+                );
               }}
             />
-
-            <button
-              type="button"
-              className="new-btn"
-              style={{
-                marginTop: "20px",
-                width: "100%",
-                background: "#64748b",
-              }}
-              onClick={() =>
-                setToonForm(false)
-              }
-            >
-              Sluiten
-            </button>
           </div>
         </div>
       )}
+
+      {/* =======================================================
+          DETAIL MODAL
+      ======================================================== */}
+
+      {toonDetail &&
+        geselecteerdeRegistratie && (
+          <div
+            style={overlayStyle}
+            onClick={(e) => {
+              if (
+                e.target ===
+                e.currentTarget
+              ) {
+                sluitDetail();
+              }
+            }}
+          >
+            <div
+              style={{
+                ...modalStyle,
+                maxWidth: "650px",
+              }}
+            >
+              <DetailRegistratie
+                registratie={
+                  geselecteerdeRegistratie
+                }
+                statusKleur={
+                  statusKleur
+                }
+                isGoedgekeurd={
+                  isGoedgekeurd
+                }
+                isAfgekeurd={
+                  isAfgekeurd
+                }
+                bezig={
+                  actieBezig ===
+                  geselecteerdeRegistratie.id
+                }
+                onClose={
+                  sluitDetail
+                }
+                onEdit={
+                  bewerkenRegistratie
+                }
+                onApprove={() =>
+                  wijzigStatus(
+                    geselecteerdeRegistratie.id,
+                    "Goedgekeurd"
+                  )
+                }
+                onReject={() =>
+                  wijzigStatus(
+                    geselecteerdeRegistratie.id,
+                    "Afgekeurd"
+                  )
+                }
+              />
+            </div>
+          </div>
+        )}
     </>
   );
 }
+
+// ============================================================
+// DETAIL COMPONENT
+// ============================================================
+
+function DetailRegistratie({
+  registratie,
+  statusKleur,
+  isGoedgekeurd,
+  isAfgekeurd,
+  bezig,
+  onClose,
+  onEdit,
+  onApprove,
+  onReject,
+}) {
+  const kleur =
+    statusKleur(
+      registratie.status
+    );
+
+  return (
+    <div>
+      {/* HEADER */}
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent:
+            "space-between",
+          alignItems:
+            "flex-start",
+          gap: "15px",
+          marginBottom: "20px",
+        }}
+      >
+        <div>
+          <h2
+            style={{
+              margin: 0,
+              color: "#15803d",
+            }}
+          >
+            🕒 Urenregistratie
+          </h2>
+
+          <div
+            style={{
+              marginTop: "5px",
+              color: "#64748b",
+              fontSize: "14px",
+            }}
+          >
+            Details van de gewerkte
+            uren
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          style={closeButtonStyle}
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* STATUS */}
+
+      <div
+        style={{
+          background:
+            kleur.background,
+          color: kleur.color,
+          borderRadius: "12px",
+          padding: "12px 15px",
+          marginBottom: "18px",
+          fontWeight: "700",
+          textAlign: "center",
+        }}
+      >
+        {registratie.status ||
+          "Ingediend"}
+      </div>
+
+      {/* MEDEWERKER */}
+
+      <DetailSection titel="👤 Medewerker">
+        <DetailRow
+          label="Naam"
+          value={
+            registratie.medewerker ||
+            "-"
+          }
+        />
+      </DetailSection>
+
+      {/* DIENST */}
+
+      <DetailSection titel="📅 Dienst">
+        <DetailRow
+          label="Datum"
+          value={
+            registratie.datum ||
+            "-"
+          }
+        />
+
+        <DetailRow
+          label="Terminal"
+          value={
+            registratie.terminal ||
+            "-"
+          }
+        />
+
+        <DetailRow
+          label="Dienst"
+          value={
+            registratie.dienst ||
+            "-"
+          }
+        />
+
+        <DetailRow
+          label="Planning ID"
+          value={
+            registratie.planning_id ||
+            "-"
+          }
+        />
+      </DetailSection>
+
+      {/* UREN */}
+
+      <DetailSection titel="🕒 Gewerkte uren">
+        <DetailRow
+          label="Starttijd"
+          value={formatTijd(
+            registratie.starttijd
+          )}
+        />
+
+        <DetailRow
+          label="Eindtijd"
+          value={formatTijd(
+            registratie.eindtijd
+          )}
+        />
+
+        <DetailRow
+          label="Pauze"
+          value={`${registratie.pauze_minuten ?? 0} minuten`}
+        />
+
+        <DetailRow
+          label="Gewerkte uren"
+          value={`${Number(
+            registratie.gewerkte_uren ||
+              0
+          ).toFixed(2)} uur`}
+          sterk
+        />
+      </DetailSection>
+
+      {/* OPMERKING */}
+
+      <DetailSection titel="📝 Opmerking">
+        <div
+          style={{
+            background:
+              "#f8fafc",
+            borderRadius: "10px",
+            padding: "12px",
+            color: "#334155",
+            minHeight: "45px",
+            whiteSpace:
+              "pre-wrap",
+          }}
+        >
+          {registratie.opmerking ||
+            "Geen opmerking toegevoegd."}
+        </div>
+      </DetailSection>
+
+      {/* GOEDGEKEURD */}
+
+      {registratie.goedgekeurd_op && (
+        <DetailSection titel="✅ Goedkeuring">
+          <DetailRow
+            label="Goedgekeurd op"
+            value={formatDatumTijd(
+              registratie.goedgekeurd_op
+            )}
+          />
+
+          {registratie.goedgekeurd_door && (
+            <DetailRow
+              label="Goedgekeurd door"
+              value={
+                registratie.goedgekeurd_door
+              }
+            />
+          )}
+        </DetailSection>
+      )}
+
+      {/* KNOPPEN */}
+
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginTop: "20px",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          type="button"
+          onClick={onEdit}
+          style={{
+            ...actieButtonStyle,
+            background:
+              "#2563eb",
+          }}
+        >
+          ✏️ Bewerken
+        </button>
+
+        {!isGoedgekeurd(
+          registratie.status
+        ) && (
+          <button
+            type="button"
+            disabled={bezig}
+            onClick={onApprove}
+            style={{
+              ...actieButtonStyle,
+              background:
+                "#16a34a",
+            }}
+          >
+            {bezig
+              ? "⏳"
+              : "✅ Goedkeuren"}
+          </button>
+        )}
+
+        {!isAfgekeurd(
+          registratie.status
+        ) && (
+          <button
+            type="button"
+            disabled={bezig}
+            onClick={onReject}
+            style={{
+              ...actieButtonStyle,
+              background:
+                "#dc2626",
+            }}
+          >
+            {bezig
+              ? "⏳"
+              : "❌ Afkeuren"}
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            ...actieButtonStyle,
+            background:
+              "#64748b",
+          }}
+        >
+          Sluiten
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// DETAIL HULPCOMPONENTEN
+// ============================================================
+
+function DetailSection({
+  titel,
+  children,
+}) {
+  return (
+    <div
+      style={{
+        marginBottom: "15px",
+      }}
+    >
+      <div
+        style={{
+          fontWeight: "700",
+          color: "#334155",
+          marginBottom: "8px",
+        }}
+      >
+        {titel}
+      </div>
+
+      <div
+        style={{
+          border:
+            "1px solid #e2e8f0",
+          borderRadius: "10px",
+          overflow: "hidden",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  sterk = false,
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent:
+          "space-between",
+        gap: "15px",
+        padding: "10px 12px",
+        borderBottom:
+          "1px solid #f1f5f9",
+      }}
+    >
+      <span
+        style={{
+          color: "#64748b",
+        }}
+      >
+        {label}
+      </span>
+
+      <strong
+        style={{
+          color: sterk
+            ? "#15803d"
+            : "#0f172a",
+          textAlign: "right",
+        }}
+      >
+        {value}
+      </strong>
+    </div>
+  );
+}
+
+// ============================================================
+// DATUM / TIJD
+// ============================================================
+
+function formatTijd(tijd) {
+  if (!tijd) {
+    return "-";
+  }
+
+  return String(tijd).substring(
+    0,
+    5
+  );
+}
+
+function formatDatumTijd(waarde) {
+  if (!waarde) {
+    return "-";
+  }
+
+  try {
+    return new Date(
+      waarde
+    ).toLocaleString(
+      "nl-NL",
+      {
+        dateStyle: "short",
+        timeStyle: "short",
+      }
+    );
+  } catch {
+    return waarde;
+  }
+}
+
+// ============================================================
+// STIJLEN
+// ============================================================
+
+const overlayStyle = {
+  position: "fixed",
+  inset: 0,
+  background:
+    "rgba(15,23,42,.55)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "20px",
+  zIndex: 1000,
+};
+
+const modalStyle = {
+  width: "100%",
+  maxHeight: "90vh",
+  overflowY: "auto",
+  background: "#ffffff",
+  borderRadius: "18px",
+  padding: "25px",
+  boxSizing: "border-box",
+  boxShadow:
+    "0 25px 60px rgba(0,0,0,.25)",
+};
+
+const closeButtonStyle = {
+  width: "36px",
+  height: "36px",
+  border: "none",
+  borderRadius: "8px",
+  background: "#f1f5f9",
+  color: "#475569",
+  cursor: "pointer",
+  fontSize: "18px",
+};
+
+const actieButtonStyle = {
+  flex: "1 1 140px",
+  border: "none",
+  borderRadius: "9px",
+  padding: "11px 14px",
+  color: "#ffffff",
+  fontWeight: "700",
+  cursor: "pointer",
+};
+
+function StatusCard({
+  icon,
+  titel,
+  aantal,
+  uren,
+  background,
+  color,
+}) {
+  return (
+    <div
+      style={{
+        background,
+        borderRadius: "14px",
+        padding: "18px",
+      }}
+    >
+      <div
+        style={{
+          color,
+          fontSize: "14px",
+          fontWeight: "600",
+        }}
+      >
+        {icon} {titel}
+      </div>
+
+      {aantal !== null &&
+        aantal !== undefined && (
+          <strong
+            style={{
+              display: "block",
+              marginTop: "5px",
+              fontSize: "26px",
+              color,
+            }}
+          >
+            {aantal}
+          </strong>
+        )}
+
+      {uren !== null &&
+        uren !== undefined && (
+          <div
+            style={{
+              marginTop: "6px",
+              fontSize: "14px",
+              color,
+              fontWeight: "600",
+            }}
+          >
+            {Number(
+              uren
+            ).toFixed(2)}{" "}
+            uur
+          </div>
+        )}
+    </div>
+  );
+}
+
+function InfoCard({
+  titel,
+  waarde,
+  kleur,
+}) {
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        borderRadius: "14px",
+        padding: "18px",
+        border:
+          "1px solid #e2e8f0",
+      }}
+    >
+      <div
+        style={{
+          color: "#64748b",
+        }}
+      >
+        {titel}
+      </div>
+
+      <strong
+        style={{
+          display: "block",
+          marginTop: "5px",
+          fontSize: "24px",
+          color: kleur,
+        }}
+      >
+        {waarde}
+      </strong>
+    </div>
+  );
+}
+
+const thStyle = {
+  padding: "13px 8px",
+  textAlign: "left",
+  whiteSpace: "nowrap",
+};
+
+const tdStyle = {
+  padding: "13px 8px",
+  whiteSpace: "nowrap",
+};

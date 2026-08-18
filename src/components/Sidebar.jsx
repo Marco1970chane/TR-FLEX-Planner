@@ -6,16 +6,32 @@ import { useAuthContext } from "../contexts/AuthContext";
 export default function Sidebar() {
   const { profile } = useAuthContext();
 
-  const rol = profile?.rol || "medewerker";
+  // Rol altijd naar kleine letters om problemen met
+  // "Admin", "ADMIN" of "admin" te voorkomen.
+  const rol = String(
+    profile?.rol || "medewerker"
+  )
+    .trim()
+    .toLowerCase();
 
   const isAdmin = rol === "admin";
   const isPlanner = rol === "planner";
   const isOperations = rol === "operations";
   const isHR = rol === "hr";
 
+  function menuClass({ isActive }) {
+    return isActive
+      ? "menu-item active"
+      : "menu-item";
+  }
+
   return (
     <aside className="sidebar">
       <div>
+        {/* =====================================================
+            LOGO
+        ====================================================== */}
+
         <h2>TR Planner</h2>
 
         <p
@@ -29,166 +45,214 @@ export default function Sidebar() {
         </p>
 
         <nav>
-          {/* Dashboard */}
+          {/* ===================================================
+              DASHBOARD
+          ==================================================== */}
+
           <NavLink
             to="/"
             end
-            className={({ isActive }) =>
-              isActive ? "menu-item active" : "menu-item"
-            }
+            className={menuClass}
           >
             📊 Dashboard
           </NavLink>
 
-          {/* Planning */}
+          {/* ===================================================
+              PLANNING
+          ==================================================== */}
+
           <NavLink
             to="/planning"
-            className={({ isActive }) =>
-              isActive ? "menu-item active" : "menu-item"
-            }
+            className={menuClass}
           >
             📅 Planning
           </NavLink>
 
-          {/* Jaarplanner */}
-          {(isAdmin || isPlanner || isOperations) && (
+          {/* ===================================================
+              JAARPLANNER
+          ==================================================== */}
+
+          {(isAdmin ||
+            isPlanner ||
+            isOperations) && (
             <NavLink
               to="/jaarplanner"
-              className={({ isActive }) =>
-                isActive ? "menu-item active" : "menu-item"
-              }
+              className={menuClass}
             >
               🗓 Jaarplanner
             </NavLink>
           )}
 
-          {/* Medewerkers */}
-          {(isAdmin || isPlanner || isOperations || isHR) && (
+          {/* ===================================================
+              MEDEWERKERS
+          ==================================================== */}
+
+          {(isAdmin ||
+            isPlanner ||
+            isOperations ||
+            isHR) && (
             <NavLink
               to="/medewerkers"
-              className={({ isActive }) =>
-                isActive ? "menu-item active" : "menu-item"
-              }
+              className={menuClass}
             >
               👷 Medewerkers
             </NavLink>
           )}
 
-          {/* Toolboxen */}
+          {/* ===================================================
+              TOOLBOXEN
+          ==================================================== */}
+
           <NavLink
             to="/toolboxen"
-            className={({ isActive }) =>
-              isActive ? "menu-item active" : "menu-item"
-            }
+            className={menuClass}
           >
             📦 Toolboxen
           </NavLink>
 
-          {/* Toolbox Vragen */}
-          {(isAdmin || isHR || isOperations) && (
+          {/* ===================================================
+              TOOLBOX VRAGEN
+          ==================================================== */}
+
+          {(isAdmin ||
+            isHR ||
+            isOperations) && (
             <NavLink
               to="/toolboxvragen"
-              className={({ isActive }) =>
-                isActive ? "menu-item active" : "menu-item"
-              }
+              className={menuClass}
             >
               ❓ Toolbox Vragen
             </NavLink>
           )}
 
-          {/* Mijn Toolboxen */}
+          {/* ===================================================
+              MIJN TOOLBOXEN
+          ==================================================== */}
+
           <NavLink
             to="/mijntoolboxen"
-            className={({ isActive }) =>
-              isActive ? "menu-item active" : "menu-item"
-            }
+            className={menuClass}
           >
             🎓 Mijn Toolboxen
           </NavLink>
 
-          {/* Gebruikersbeheer */}
+          {/* ===================================================
+              GEBRUIKERSBEHEER
+          ==================================================== */}
+
           {isAdmin && (
             <NavLink
               to="/gebruikers"
-              className={({ isActive }) =>
-                isActive ? "menu-item active" : "menu-item"
-              }
+              className={menuClass}
             >
               👤 Gebruikersbeheer
             </NavLink>
           )}
 
-          {/* Terminals */}
-          {(isAdmin || isOperations) && (
+          {/* ===================================================
+              TERMINALS
+          ==================================================== */}
+
+          {(isAdmin ||
+            isOperations) && (
             <NavLink
               to="/terminals"
-              className={({ isActive }) =>
-                isActive ? "menu-item active" : "menu-item"
-              }
+              className={menuClass}
             >
               🏭 Terminals
             </NavLink>
           )}
 
-          {/* Urenregistratie */}
-          {(isAdmin || isPlanner || isOperations) && (
+          {/* ===================================================
+              URENREGISTRATIE
+          ==================================================== */}
+
+          {(isAdmin ||
+            isPlanner ||
+            isOperations) && (
             <NavLink
               to="/urenregistratie"
-              className={({ isActive }) =>
-                isActive ? "menu-item active" : "menu-item"
-              }
+              className={menuClass}
             >
               ⏱ Urenregistratie
             </NavLink>
           )}
 
-          {/* Import / Export */}
-          {(isAdmin || isPlanner || isOperations) && (
+          {/* ===================================================
+              ZZP FACTUREN
+              ADMIN + OPERATIONS
+          ==================================================== */}
+
+          {(isAdmin ||
+            isOperations) && (
+            <NavLink
+              to="/zzp-facturen"
+              className={menuClass}
+            >
+              💶 ZZP Facturen
+            </NavLink>
+          )}
+
+          {/* ===================================================
+              IMPORT / EXPORT
+          ==================================================== */}
+
+          {(isAdmin ||
+            isPlanner ||
+            isOperations) && (
             <NavLink
               to="/import-export"
-              className={({ isActive }) =>
-                isActive ? "menu-item active" : "menu-item"
-              }
+              className={menuClass}
             >
               📥 Import / Export
             </NavLink>
           )}
 
-          {/* Open diensten */}
+          {/* ===================================================
+              OPEN DIENSTEN
+          ==================================================== */}
+
           <NavLink
             to="/opendiensten"
-            className={({ isActive }) =>
-              isActive ? "menu-item active" : "menu-item"
-            }
+            className={menuClass}
           >
             📢 Open diensten
           </NavLink>
 
-          {/* Certificaten */}
-          {(isAdmin || isOperations || isHR) && (
+          {/* ===================================================
+              CERTIFICATEN
+          ==================================================== */}
+
+          {(isAdmin ||
+            isOperations ||
+            isHR) && (
             <NavLink
               to="/certificaten"
-              className={({ isActive }) =>
-                isActive ? "menu-item active" : "menu-item"
-              }
+              className={menuClass}
             >
               🏅 Certificaten
             </NavLink>
           )}
 
-          {/* Rapportages */}
-          {(isAdmin || isOperations) && (
+          {/* ===================================================
+              RAPPORTAGES
+          ==================================================== */}
+
+          {(isAdmin ||
+            isOperations) && (
             <NavLink
               to="/rapportages"
-              className={({ isActive }) =>
-                isActive ? "menu-item active" : "menu-item"
-              }
+              className={menuClass}
             >
               📈 Rapportages
             </NavLink>
           )}
         </nav>
       </div>
+
+      {/* =====================================================
+          FOOTER
+      ====================================================== */}
 
       <div
         style={{
@@ -199,8 +263,12 @@ export default function Sidebar() {
         }}
       >
         <strong>TR Planner v2.0</strong>
+
         <br />
-        <small>Rol: {rol}</small>
+
+        <small>
+          Rol: {rol}
+        </small>
       </div>
     </aside>
   );
