@@ -1,96 +1,73 @@
-import "./WeekPlanner.css";
-
-function terminalClass(terminal = "") {
-  const t = terminal.toLowerCase();
-
-  if (t.includes("wilmar")) return "wilmar";
-  if (t.includes("chane")) return "chane";
-  if (t.includes("lbc")) return "lbc";
-  if (t.includes("standic")) return "standic";
-  if (t.includes("exolum")) return "exolum";
-  if (t.includes("aglobis")) return "aglobis";
-  if (t.includes("tepsa")) return "tepsa";
-  if (t.includes("shell")) return "shell";
-  if (t.includes("met")) return "met";
-
-  return "default-terminal";
-}
-
-function statusClass(status = "") {
-  switch (status.toLowerCase()) {
-    case "ingepland":
-      return "status-ing";
-    case "open":
-      return "status-open";
-    case "training":
-      return "status-training";
-    case "ziek":
-      return "status-ziek";
-    default:
-      return "status-default";
-  }
-}
-
-export default function PlanningCard({
+export default function DienstCard({
   dienst,
   onClick,
-  onWhatsApp,
 }) {
+  const kleuren = {
+    Rotterdam: "#16a34a",
+    Euromax: "#2563eb",
+    RWG: "#9333ea",
+    APM: "#ea580c",
+    ECT: "#0891b2",
+  };
+
+  const achtergrond =
+    kleuren[dienst.terminal] || "#64748b";
+
   return (
     <div
-      className={`dienst-card ${terminalClass(
-        dienst.terminal
-      )}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.(dienst);
+      onClick={() => onClick?.(dienst)}
+      style={{
+        background: achtergrond,
+        color: "#fff",
+        borderRadius: "12px",
+        padding: "10px",
+        cursor: "pointer",
+        minHeight: "72px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        boxShadow: "0 4px 10px rgba(0,0,0,.15)",
+        transition: "all .2s ease",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform =
+          "translateY(-2px)";
+        e.currentTarget.style.boxShadow =
+          "0 8px 20px rgba(0,0,0,.22)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform =
+          "translateY(0)";
+        e.currentTarget.style.boxShadow =
+          "0 4px 10px rgba(0,0,0,.15)";
       }}
     >
-      <div className="dienst-header">
-        <strong>{dienst.terminal}</strong>
-
-        {dienst.status && (
-          <span
-            className={`dienst-status ${statusClass(
-              dienst.status
-            )}`}
-          >
-            {dienst.status}
-          </span>
-        )}
+      <div
+        style={{
+          fontWeight: "700",
+          fontSize: "14px",
+        }}
+      >
+        🏭 {dienst.terminal}
       </div>
 
-      <div className="dienst-medewerker">
-        👤{" "}
-        <strong>
-          {dienst.medewerker || "OPEN DIENST"}
-        </strong>
+      <div
+        style={{
+          fontSize: "13px",
+          opacity: .95,
+        }}
+      >
+        {dienst.functie || dienst.status || "Dienst"}
       </div>
 
-      {(dienst.starttijd || dienst.eindtijd) && (
-        <div className="dienst-tijd">
-          🕒 {dienst.starttijd || "--:--"} -{" "}
-          {dienst.eindtijd || "--:--"}
-        </div>
-      )}
-
-      {dienst.opmerking && (
-        <div className="dienst-opmerking">
-          💬 {dienst.opmerking}
-        </div>
-      )}
-
-      {dienst.status?.toLowerCase() === "open" && (
-        <button
-          className="whatsapp-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onWhatsApp?.(dienst);
-          }}
-        >
-          📱 Dienst aanbieden
-        </button>
-      )}
+      <div
+        style={{
+          fontSize: "13px",
+          fontWeight: "600",
+        }}
+      >
+        🕒 {dienst.starttijd} - {dienst.eindtijd}
+      </div>
     </div>
   );
 }
